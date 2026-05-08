@@ -4,4 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-burn = { version = "0.20.1", features = ["fusion", "std", "train", "tui", "vision", "wgpu"], default-features = false}
+burn = { version = "0.20.1", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu"]}
+elements_rs = "0.2.7"
+mascot-rs = { git = "https://github.com/LucaCappelletti94/mascot-rs" }
+molecular-formulas = "0.1.10"
+pollster = "0.4.0"
+mass_spectrometry = { git = "https://github.com/earth-metabolome-initiative/mass-spectrometry-traits" }
+rand = { version = "0.10.1", features = ["chacha"] }
+tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread"] }
+serde = "1.0.228"
+csv = "1.4.0"

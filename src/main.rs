@@ -1,17 +1,57 @@
 #![recursion_limit = "256"]
 
-use burn::backend::Wgpu;
-use burn::tensor::Tensor;
+mod data;
+mod inference;
+mod mcc;
+mod model;
+mod training;
+mod output;
+mod error;
+mod dataset;
 
-// Type alias for the backend to use.
-type Backend = Wgpu;
+use crate::{
+    data::ELEMENT_COUNT, dataset::SpectraData, error::SpectraError, inference::create_confusion_matrices, model::ModelConfig, training::TrainingConfig
+};
+use std::fs::File;
+use csv::Writer;
+use burn::{
+    backend::{
+        Autodiff, Wgpu,
+    },
+    optim::AdamConfig
+};
 
-fn main() {
-    let device = Default::default();
-    // Creation of two tensors, the first with explicit values and the second one with ones, with the same shape as the first
-    let tensor_1 = Tensor::<Backend, 2>::from_data([[2., 3.], [4., 5.]], &device);
-    let tensor_2 = Tensor::<Backend, 2>::ones_like(&tensor_1);
+fn main() -> Result<(), SpectraError> {
+    type MyBackend = Wgpu<f32, i32>;
+    type MyAutodiffBackend = Autodiff<MyBackend>;
 
-    // Print the element-wise addition (done with the WGPU backend) of the two tensors.
-    println!("{}", tensor_1 + tensor_2);
+    let device = burn::backend::wgpu::WgpuDevice::default();
+    let artifact_dir = "./first_attempt";
+
+    println!("Loading spectra.");
+    let dataset = SpectraData::new()?;
+    println!("Finished loading spectra");
+    let model_config = ModelConfig::new(ELEMENT_COUNT, 256)
+        .with_class_weights(Some(dataset.class_weights.clone()));
+
+    crate::training::train::<MyAutodiffBackend>(
+        artifact_dir,
+        &dataset,
+        TrainingConfig::new(model_config, AdamConfig::new()),
+        device.clone(),
+    );
+
+    let results =
+        crate::inference::infer::<MyBackend>(artifact_dir, device, dataset.test(42).dataset);
+
+    let confusion_matrices = create_confusion_matrices(results, dataset.test(42).dataset, 0.5);
+
+    let file = File::create("results.csv")?;
+    let mut wtr = Writer::from_writer(file);
+    for matrix in confusion_matrices {
+        wtr.serialize(matrix).unwrap();
+    }
+
+    wtr.flush()?;
+    Ok(())
 }
