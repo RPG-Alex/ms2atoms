@@ -8,6 +8,8 @@ mod mcc;
 mod model;
 mod output;
 mod training;
+mod experimental_setup;
+mod holdout;
 
 use crate::{
     data::ELEMENT_COUNT, dataset::SpectraData, error::SpectraError,
