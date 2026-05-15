@@ -64,8 +64,7 @@ impl<B: Backend> Model<B> {
         let x = self.inner_activation.forward(x);
         let x = self.dropout.forward(x);
         let x = self.batch_norm2.forward(x);
-        let x = self.linear3.forward(x);
-        x
+        self.linear3.forward(x)
     }
 
     pub fn forward(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {

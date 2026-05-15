@@ -99,11 +99,9 @@ where
 
         let numerator = tp.clone() * tn.clone() - fp.clone() * fn_.clone();
 
-        let denominator = ((tp.clone() + fp.clone())
-            * (tp + fn_.clone())
-            * (tn.clone() + fp)
-            * (tn + fn_))
-            .sqrt();
+        let denominator =
+            ((tp.clone() + fp.clone()) * (tp + fn_.clone()) * (tn.clone() + fp) * (tn + fn_))
+                .sqrt();
 
         let mcc = numerator / denominator.clamp_min(1e-12);
 

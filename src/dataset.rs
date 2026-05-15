@@ -78,9 +78,7 @@ fn load_spectra() -> Result<Vec<SpectrumSample>, SpectraError> {
     Ok(output)
 }
 
-fn spec_occurrence(
-    formula: &ChemicalFormula<u32, i32>,
-) -> [bool; ELEMENT_COUNT] {
+fn spec_occurrence(formula: &ChemicalFormula<u32, i32>) -> [bool; ELEMENT_COUNT] {
     let mut elements_occurrence = [false; ELEMENT_COUNT];
     for (i, &e) in ELEMENTS.iter().enumerate() {
         if formula.contains_element(e) {
