@@ -1,7 +1,7 @@
 use crate::{
     data::{SpectraScribeBatch, SpectraScribeBatcher},
     dataset::SpectraData,
-    holdout::{self, Holdout},
+    holdout::Holdout,
     mcc::MatthewsCorrelationMetric,
     model::{Model, ModelConfig},
 };
@@ -102,25 +102,38 @@ pub fn train<B: AutodiffBackend>(
     config: TrainingConfig,
     device: B::Device,
 ) {
-    create_artifact_dir(artifact_dir);
+
+}
+
+pub fn train_holdout<B, H>(
+    artifact_dir: &str,
+    holdout: &H,
+    config: TrainingConfig,
+    device: B::Device,
+) where
+    B: AutodiffBackend,
+    H: Holdout,
+{
+
+        create_artifact_dir(artifact_dir);
     config
         .save(format!("{artifact_dir}/config.json"))
         .expect("Config should be saved successfully");
     B::seed(&device, config.seed);
 
-    let batcher = SpectraScribeBatcher::default();
+    let batcher = SpectraScribeBatcher::new(holdout.class_indices().to_vec());
 
     let dataloader_train = DataLoaderBuilder::new(batcher.clone())
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(train_dataset.clone());
+        .build(holdout.train_dataset().clone());
 
     let dataloader_validation = DataLoaderBuilder::new(batcher.clone())
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(validation_dataset.clone());
+        .build(holdout.validation_dataset().clone());
 
     let training = SupervisedTraining::new(artifact_dir, dataloader_train, dataloader_validation)
         .metrics((
@@ -134,7 +147,7 @@ pub fn train<B: AutodiffBackend>(
 
     let model = config
         .model
-        .init::<B>(&device, Some(train_dataset.class_weights.clone()));
+        .init::<B>(&device, Some(holdout.train_dataset().class_weights.clone()));
     let result = training.launch(Learner::new(
         model,
         config.optimizer.init(),
@@ -145,22 +158,5 @@ pub fn train<B: AutodiffBackend>(
         .model
         .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
         .expect("Trained model should be saved successfully");
-}
 
-pub fn train_holdout<B, H>(
-    artifact_dir: &str,
-    holdout: &H,
-    config: TrainingConfig,
-    device: B::Device,
-) where
-    B: AutodiffBackend,
-    H: Holdout,
-{
-    train::<B>(
-        artifact_dir,
-        holdout.train_dataset(),
-        holdout.validation_dataset(),
-        config,
-        device,
-    );
 }

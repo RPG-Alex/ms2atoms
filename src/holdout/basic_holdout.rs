@@ -9,6 +9,7 @@ pub struct BasicHoldout {
     train: SpectraData,
     validation: SpectraData,
     classes: Vec<Element>,
+    class_indices: Vec<usize>,
     holdout_number: usize,
     random_seed: usize,
 }
@@ -18,6 +19,7 @@ impl BasicHoldout {
         train: SpectraData,
         validation: SpectraData,
         classes: Vec<Element>,
+        class_indices: Vec<usize>,
         holdout_number: usize,
         random_seed: usize,
     ) -> Self {
@@ -25,6 +27,7 @@ impl BasicHoldout {
             train,
             validation,
             classes,
+            class_indices,
             holdout_number,
             random_seed,
         }
@@ -42,6 +45,10 @@ impl BasicHoldout {
 impl Holdout for BasicHoldout {
     fn classes(&self) -> &[Element] {
         &self.classes
+    }
+
+    fn class_indices(&self) -> &[usize] {
+        &self.class_indices
     }
 
     fn holdout_number(&self) -> usize {

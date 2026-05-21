@@ -54,8 +54,8 @@ impl ExperimentConfig for Experiment1Config {
         let class_indices = observed_class_indices(&dataset.dataset);
 
         let classes = class_indices
-            .into_iter()
-            .map(|index| ELEMENTS[index])
+            .iter()
+            .map(|&index| ELEMENTS[index])
             .collect::<Vec<_>>();
 
         let mut holdouts = Vec::with_capacity(self.number_of_holdouts());
@@ -83,6 +83,7 @@ impl ExperimentConfig for Experiment1Config {
                 train,
                 validation,
                 classes.clone(),
+                class_indices.clone(),
                 holdout_number,
                 holdout_seed as usize,
             );

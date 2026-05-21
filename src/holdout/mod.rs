@@ -10,6 +10,8 @@ use crate::{data::SpectrumSample, dataset::SpectraData};
 pub trait Holdout {
     /// Returns a slice of [`Element`] that constitute the class
     fn classes(&self) -> &[Element];
+    /// Returns the indices of the classes from the `ELEMENTS` constant
+    fn class_indices(&self) -> &[usize];
     /// The iteration of the holdout
     fn holdout_number(&self) -> usize;
     /// the value of the random seed for the holdout

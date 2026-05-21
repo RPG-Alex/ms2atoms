@@ -1,7 +1,18 @@
 use burn::{data::dataloader::batcher::Batcher, prelude::*};
 use molecular_formulas::prelude::*;
 #[derive(Clone, Default)]
-pub struct SpectraScribeBatcher {}
+pub struct SpectraScribeBatcher {
+    class_indices: Vec<usize>,
+}
+
+impl SpectraScribeBatcher {
+    pub fn new(class_indices: Vec<usize>) -> Self {
+        Self { class_indices }
+    }
+    pub fn num_classes(&self) -> usize {
+        self.class_indices.len()
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct SpectraScribeBatch<B: Backend> {
@@ -151,11 +162,12 @@ impl<B: Backend> Batcher<B, SpectrumSample, SpectraScribeBatch<B>> for SpectraSc
             .map(|data| Tensor::<B, 1>::from_data(data, device))
             .map(|tensor| tensor.reshape([1, BIN_SIZE]))
             .collect();
-        let targets = items
-            .iter()
-            .map(|item| Tensor::<B, 1, Bool>::from_data(item.element_present, device))
-            .map(|tensor| tensor.reshape([1, ELEMENT_COUNT]).int())
-            .collect();
+        let targets = items.iter().map(|item| {
+            let selected_targets = self.class_indices.iter().map(|&class_index| item.element_present[class_index]).collect::<Vec<_>>();
+            Tensor::<B,1, Bool>::from_data(selected_targets.as_slice(), device)
+                .reshape([1, self.num_classes()])
+                .int()
+        }).collect();
         let spectra = Tensor::cat(spectra, 0);
         let targets = Tensor::cat(targets, 0);
         SpectraScribeBatch { spectra, targets }
