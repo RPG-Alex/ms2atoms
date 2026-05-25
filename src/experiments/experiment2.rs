@@ -16,11 +16,20 @@ use crate::{
     training::TrainingConfig,
 };
 
+fn experiment_2_config() -> StandardConfig {
+    StandardConfig {
+        // Experiment variable changed. Increase weight max
+        weight_range: (0.05, 25.0),
+        experiment_num: 2,
+        ..StandardConfig::default()
+    }
+}
+
 pub fn run() -> Result<(), SpectraError> {
     type MyBackend = Wgpu<f32, i32>;
     type MyAutodiffBackend = Autodiff<MyBackend>;
 
-    let experiment_config = StandardConfig::default();
+    let experiment_config = experiment_2_config();
 
     let device = burn::backend::wgpu::WgpuDevice::default();
 

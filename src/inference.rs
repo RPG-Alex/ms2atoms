@@ -23,10 +23,7 @@ pub fn infer<B: Backend>(
         .load(format!("{artifact_dir}/model").into(), device)
         .expect("Trained model should exist; run train first");
 
-    let model = config
-        .model
-        .init::<B>(device)
-        .load_record(record);
+    let model = config.model.init::<B>(device).load_record(record);
 
     let batcher = SpectraScribeBatcher::new(config.class_indices.clone(), config.model.bin_size());
     let batch = batcher.batch(items, device);

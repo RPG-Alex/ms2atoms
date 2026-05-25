@@ -27,10 +27,7 @@ pub struct ModelConfig {
 }
 
 impl ModelConfig {
-    pub fn init<B: Backend>(
-        &self,
-        device: &B::Device,
-    ) -> Model<B> {
+    pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
             linear1: LinearConfig::new(self.bin_size, self.hidden_size).init(device),
             batch_norm1: BatchNormConfig::new(self.hidden_size).init(device),

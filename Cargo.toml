@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-burn = { version = "0.20.1", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu"]}
+burn = { version = "0.20.1", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu", "autotune"]}
 elements_rs = "0.2.7"
 mascot-rs = { git = "https://github.com/LucaCappelletti94/mascot-rs" }
 molecular-formulas = "0.1.10"

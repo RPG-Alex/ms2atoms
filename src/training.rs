@@ -139,9 +139,7 @@ pub fn train_holdout<B, H>(
         .num_epochs(config.num_epochs)
         .summary();
 
-    let model = config
-        .model
-        .init::<B>(&device);
+    let model = config.model.init::<B>(&device);
     let result = training.launch(Learner::new(
         model,
         config.optimizer.init(),

@@ -1,6 +1,9 @@
 #![recursion_limit = "256"]
 
-use crate::{error::SpectraError, experiments::experiment1};
+use crate::{
+    error::SpectraError,
+    experiments::{experiment1, experiment2},
+};
 
 mod data;
 mod dataset;
@@ -15,5 +18,6 @@ mod output;
 mod training;
 
 fn main() -> Result<(), SpectraError> {
-    experiment1::run()
+    experiment1::run()?;
+    experiment2::run()
 }

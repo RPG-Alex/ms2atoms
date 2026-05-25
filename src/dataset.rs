@@ -31,7 +31,11 @@ impl SpectraData {
         class_indices
             .iter()
             .map(|&class_index| {
-                let positive_count = self.dataset.iter().filter(|sample| sample.element_present[class_index]).count() as f32;
+                let positive_count = self
+                    .dataset
+                    .iter()
+                    .filter(|sample| sample.element_present[class_index])
+                    .count() as f32;
                 let positive_count = positive_count.max(1.0);
                 let weight = n_samples / (positive_count * n_classes);
                 weight.clamp(min_weight, max_weight)
@@ -76,7 +80,6 @@ fn spec_occurrence(formula: &ChemicalFormula<u32, i32>) -> [bool; ELEMENT_COUNT]
     }
     elements_occurrence
 }
-
 
 impl Dataset<SpectrumSample> for SpectraData {
     fn get(&self, index: usize) -> Option<SpectrumSample> {

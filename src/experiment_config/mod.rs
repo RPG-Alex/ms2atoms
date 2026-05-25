@@ -1,4 +1,5 @@
 use crate::{dataset::SpectraData, holdout::Holdout};
+pub mod standard;
 
 /// Defines the methods for setting up an experiment
 pub trait ExperimentConfig {
@@ -45,4 +46,7 @@ pub trait ExperimentConfig {
 
     /// Builds the concrete train/validation holdouts this experiment will run.
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType>;
+
+    /// Defines the number of the current experiment
+    fn experiment_num(&self) -> usize;
 }
