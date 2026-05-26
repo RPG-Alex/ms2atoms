@@ -32,22 +32,6 @@ impl<B: Backend> MatthewsCorrelationMetric<B> {
     pub fn new() -> Self {
         Self::default()
     }
-
-    fn update_name(&mut self) {
-        self.name = Arc::new(format!("MCC @ Threshold({})", self.threshold));
-    }
-
-    pub fn with_threshold(mut self, threshold: f32) -> Self {
-        self.threshold = threshold;
-        self.update_name();
-        self
-    }
-
-    pub fn with_sigmoid(mut self, sigmoid: bool) -> Self {
-        self.sigmoid = sigmoid;
-        self.update_name();
-        self
-    }
 }
 
 impl<B: Backend> Default for MatthewsCorrelationMetric<B> {

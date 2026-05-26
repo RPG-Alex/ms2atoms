@@ -21,7 +21,6 @@ pub struct ModelConfig {
     num_classes: usize,
     hidden_size: usize,
     bin_size: usize,
-    #[config(default = "0.5")]
     dropout: f64,
     class_weights: Option<Vec<f32>>,
 }
@@ -39,10 +38,6 @@ impl ModelConfig {
             inner_activation: Relu::new(),
             class_weights: self.class_weights.clone(),
         }
-    }
-
-    pub fn class_weights(&self) -> Option<Vec<f32>> {
-        self.class_weights.clone()
     }
 
     pub fn bin_size(&self) -> usize {

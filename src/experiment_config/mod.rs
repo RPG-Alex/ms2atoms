@@ -1,9 +1,8 @@
 use crate::{dataset::SpectraData, holdout::Holdout};
-pub mod standard;
 pub mod runner;
+pub mod standard;
 
 pub use runner::run_experiment;
-pub use standard::StandardConfig;
 
 /// Defines the methods for setting up an experiment
 pub trait ExperimentConfig {
@@ -23,7 +22,7 @@ pub trait ExperimentConfig {
     }
 
     /// Minimum and maximum bounds applied to class weights after frequency weighting.
-    fn weight_range(&self) -> (f32, f32);
+    fn weight_range(&self) -> Option<(f32, f32)>;
 
     /// Number of full passes the model makes over the training data.
     fn epochs(&self) -> usize;
@@ -51,7 +50,9 @@ pub trait ExperimentConfig {
     /// Builds the concrete train/validation holdouts this experiment will run.
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType>;
 
-    /// Defines the number of the current experiment
+    /// Returns the number of the current experiment
     fn experiment_num(&self) -> usize;
 
+    /// The current experiment's dropout number
+    fn dropout(&self) -> f64;
 }

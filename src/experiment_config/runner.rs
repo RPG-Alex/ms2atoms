@@ -1,11 +1,16 @@
-use std::{fs::{self, File}, path::PathBuf};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
 use burn::backend::{Autodiff, Wgpu};
 use csv::Writer;
 
-use crate::{dataset::SpectraData, error::SpectraError, experiment_config::ExperimentConfig, holdout::Holdout, inference::create_confusion_matrices, model::ModelConfig, training::TrainingConfig};
-
-
+use crate::{
+    dataset::SpectraData, error::SpectraError, experiment_config::ExperimentConfig,
+    holdout::Holdout, inference::create_confusion_matrices, model::ModelConfig,
+    training::TrainingConfig,
+};
 
 pub fn run_experiment<C>(experiment_config: C) -> Result<(), SpectraError>
 where
@@ -55,22 +60,20 @@ where
             holdout.validation_len(),
         );
 
-        let artifact_dir = format!(
-            "{experiment_dir}/holdout_{}",
-            holdout.holdout_number(),
-        );
-
-        let class_weights = holdout.train_dataset().class_weights_for(
-            holdout.class_indices(),
-            experiment_config.weight_range(),
-        );
+        let artifact_dir = format!("{experiment_dir}/holdout_{}", holdout.holdout_number(),);
+        let class_weights: Option<Vec<f32>> = experiment_config.weight_range().map(|weights| {
+            holdout
+                .train_dataset()
+                .class_weights_for(holdout.class_indices(), weights)
+        });
 
         let model_config = ModelConfig::new(
             holdout.num_classes(),
             experiment_config.hidden_size(),
             experiment_config.bin_size(),
+            experiment_config.dropout(),
         )
-        .with_class_weights(Some(class_weights));
+        .with_class_weights(class_weights);
 
         let training_config = TrainingConfig::new_with_values(
             model_config,
@@ -91,11 +94,8 @@ where
 
         let validation_items = holdout.validation_dataset().dataset.clone();
 
-        let predictions = crate::inference::infer::<MyBackend>(
-            &artifact_dir,
-            &device,
-            validation_items.clone(),
-        );
+        let predictions =
+            crate::inference::infer::<MyBackend>(&artifact_dir, &device, validation_items.clone());
 
         let confusion_matrices = create_confusion_matrices(
             predictions,

@@ -27,14 +27,6 @@ impl BasicHoldout {
             random_seed,
         }
     }
-
-    pub fn train_dataset(&self) -> &SpectraData {
-        &self.train
-    }
-
-    pub fn validation_dataset(&self) -> &SpectraData {
-        &self.validation
-    }
 }
 
 impl Holdout for BasicHoldout {

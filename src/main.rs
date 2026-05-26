@@ -2,7 +2,7 @@
 
 use crate::{
     error::SpectraError,
-    experiments::{experiment1, experiment2},
+    experiments::{experiment1, experiment2, experiment3},
 };
 
 mod data;
@@ -19,5 +19,6 @@ mod training;
 
 fn main() -> Result<(), SpectraError> {
     experiment1::run()?;
-    experiment2::run()
+    experiment2::run()?;
+    experiment3::run()
 }

@@ -15,8 +15,9 @@ pub struct StandardConfig {
     pub learning_rate: f64,
     pub hidden_size: usize,
     pub bin_size: usize,
-    pub weight_range: (f32, f32),
+    pub weight_range: Option<(f32, f32)>,
     pub experiment_num: usize,
+    pub dropout: f64,
 }
 
 impl ExperimentConfig for StandardConfig {
@@ -94,7 +95,7 @@ impl ExperimentConfig for StandardConfig {
         self.hidden_size
     }
 
-    fn weight_range(&self) -> (f32, f32) {
+    fn weight_range(&self) -> Option<(f32, f32)> {
         self.weight_range
     }
 
@@ -107,6 +108,10 @@ impl ExperimentConfig for StandardConfig {
     }
     fn experiment_num(&self) -> usize {
         self.experiment_num
+    }
+
+    fn dropout(&self) -> f64 {
+        self.dropout
     }
 }
 
@@ -122,8 +127,9 @@ impl Default for StandardConfig {
             learning_rate: 1.0e-4,
             hidden_size: 100,
             bin_size: 1000,
-            weight_range: (0.1, 10.0),
+            weight_range: Some((0.1, 10.0)),
             experiment_num: 1,
+            dropout: 0.5,
         }
     }
 }

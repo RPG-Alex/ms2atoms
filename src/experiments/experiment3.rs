@@ -3,15 +3,15 @@ use crate::{
     experiment_config::{run_experiment, standard::StandardConfig},
 };
 
-fn experiment_2_config() -> StandardConfig {
+fn experiment_3_config() -> StandardConfig {
     StandardConfig {
-        // Experiment variable changed. Increase weight max
-        weight_range: Some((0.05, 25.0)),
-        experiment_num: 2,
+        // Experiment variable changed. No weights added
+        weight_range: None,
+        experiment_num: 3,
         ..StandardConfig::default()
     }
 }
 
 pub fn run() -> Result<(), SpectraError> {
-    run_experiment(experiment_2_config())
+    run_experiment(experiment_3_config())
 }
