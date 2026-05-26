@@ -123,7 +123,7 @@ impl Default for StandardConfig {
             training_size: 0.8,
             epochs: 10,
             batch_size: 256,
-            workers: 8,
+            workers: 4,
             learning_rate: 1.0e-4,
             hidden_size: 100,
             bin_size: 1000,

@@ -46,23 +46,23 @@ impl ModelConfig {
 }
 
 impl<B: Backend> Model<B> {
-pub fn forward_logit(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
-    let [batch_size, binned_spectrum_size] = spectra.dims();
+    pub fn forward_logit(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
+        let [batch_size, binned_spectrum_size] = spectra.dims();
 
-    let x = spectra.reshape([batch_size, binned_spectrum_size]);
+        let x = spectra.reshape([batch_size, binned_spectrum_size]);
 
-    let x = self.linear1.forward(x);
-    let x = self.batch_norm1.forward(x);
-    let x = self.inner_activation.forward(x);
-    let x = self.dropout.forward(x);
+        let x = self.linear1.forward(x);
+        let x = self.batch_norm1.forward(x);
+        let x = self.inner_activation.forward(x);
+        let x = self.dropout.forward(x);
 
-    let x = self.linear2.forward(x);
-    let x = self.batch_norm2.forward(x);
-    let x = self.inner_activation.forward(x);
-    let x = self.dropout.forward(x);
+        let x = self.linear2.forward(x);
+        let x = self.batch_norm2.forward(x);
+        let x = self.inner_activation.forward(x);
+        let x = self.dropout.forward(x);
 
-    self.linear3.forward(x)
-}
+        self.linear3.forward(x)
+    }
 
     pub fn forward(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
         let logits = self.forward_logit(spectra);
