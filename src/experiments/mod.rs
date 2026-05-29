@@ -4,6 +4,7 @@ pub mod experiment1;
 pub mod experiment2;
 pub mod experiment3;
 pub mod experiment4;
+pub mod experiment5;
 
 /// Returns the indices for elements that occur in the spectra data. Useful for experiments wanting to control for only elements present in data.
 pub(crate) fn observed_class_indices(samples: &[SpectrumSample]) -> Vec<usize> {
