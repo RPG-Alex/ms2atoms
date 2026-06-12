@@ -2,11 +2,23 @@
 name = "SpectraScribe"
 version = "0.1.0"
 edition = "2024"
-description = "Machine learning tool for training a  model for MS/MS element identification"
+publish = false
+description = "Machine learning tool for training MS/MS element-identification models"
 license = "MIT"
 repository = "https://github.com/RPG-Alex/SpectraScribe"
-keywords = ["Machine Learning", "Burn", "Mass Spectrometry", "Bioinformatics", "Chemistry"]
-categories = ["Machine Learning", "Bioinformatics"]
+keywords = [
+"machine-learning",
+"burn",
+"mass-spectrometry",
+"bioinformatics",
+"chemistry",
+]
+
+categories = [
+"science",
+"science::bioinformatics",
+"science::computational-chemistry",
+]
 
 [dependencies]
 burn = { version = "0.21.0", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu", "autotune"]}
@@ -21,14 +33,22 @@ serde = "1.0.228"
 csv = "1.4.0"
 
 [lints.rust]
-unused_must_use = "forbid"
+warnings = "deny"
+missing_docs = "deny"
+unsafe_code = "forbid"
+deprecated = "deny"
+nonstandard-style = "deny"
 unused_import_braces = "forbid"
+unused_must_use = "forbid"
 unconditional_recursion = "forbid"
 unused_macro_rules = "forbid"
-deprecated = "deny"
-unsafe_code = "forbid"
 
 [lints.clippy]
+broken_intra_doc_links = "deny"
+bare_urls = "deny"
+invalid_codeblock_attributes = "deny"
+invalid_rust_codeblocks = "deny"
+missing_crate_level_docs = "deny"
 unreadable_literal = "allow"
 missing_panics_doc = "allow"
 struct_excessive_bools = "allow"
@@ -36,7 +56,27 @@ should_panic_without_expect = "allow"
 clone_on_copy = "forbid"
 unwrap_used = "deny"
 expect_used = "deny"
-pedantic = { level = "deny", priority = -1 }
+multiple_crate_versions = "allow"
+all = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
-multiple_crate_versions = "allow"
+pedantic = { level = "deny", priority = -1 }
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+empty_enum = "deny"
+enum_glob_use = "deny"
+exit = "deny"
+fn_to_numeric_cast_any = "deny"
+if_then_some_else_none = "deny"
+indexing_slicing = "deny"
+lossy_float_literal = "deny"
+mem_forget = "deny"
+multiple_inherent_impl = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+string_to_string = "deny"
+try_err = "deny"
+wildcard_dependencies = "deny"
