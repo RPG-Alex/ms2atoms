@@ -3,22 +3,6 @@
 version = 4
 
 [[package]]
-name = "SpectraScribe"
-version = "0.1.0"
-dependencies = [
- "burn",
- "csv",
- "elements_rs",
- "mascot-rs",
- "mass_spectrometry",
- "molecular-formulas",
- "pollster",
- "rand 0.10.1",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6292,6 +6276,22 @@ checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "spectra_scribe"
+version = "0.1.0"
+dependencies = [
+ "burn",
+ "csv",
+ "elements_rs",
+ "mascot-rs",
+ "mass_spectrometry",
+ "molecular-formulas",
+ "pollster",
+ "rand 0.10.1",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
