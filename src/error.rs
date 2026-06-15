@@ -3,8 +3,8 @@ use mass_spectrometry::structs::similarity_errors::SimilarityComputationError;
 
 use mascot_rs::error::MascotError;
 
+/// Error type used throughout the `SpectraScribe` pipeline.
 #[derive(Debug)]
-/// Error type used throughout the SpectraScribe pipeline.
 pub enum SpectraError {
     /// Returned when an array or tensor-compatible input has an invalid shape or value.
     InvalidArray,
