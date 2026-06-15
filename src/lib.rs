@@ -1,4 +1,4 @@
-//! # SpectraScribe
+//! # `SpectraScribe`
 //!
 //! `spectra_scribe` trains and evaluates machine-learning models for MS/MS
 //! element identification.
