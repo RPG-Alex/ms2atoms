@@ -33,6 +33,7 @@ pub struct MCCInput<B: Backend> {
 
 impl<B: Backend> MatthewsCorrelationMetric<B> {
     /// Creates a new MCC metric with the default threshold.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -41,6 +42,7 @@ impl<B: Backend> MatthewsCorrelationMetric<B> {
     ///
     /// # Parameters
     /// - `threshold` - The threshold above which an output is treated as a positive prediction.
+    #[must_use]
     pub fn with_threshold(mut self, threshold: f32) -> Self {
         self.threshold = threshold;
         self.name = Arc::new(format!("MCC Score @ Threshold({threshold})"));
@@ -51,7 +53,8 @@ impl<B: Backend> MatthewsCorrelationMetric<B> {
     ///
     /// # Parameters
     /// - `sigmoid` - Whether to apply sigmoid before computing binary predictions.
-    pub fn with_sigmoid(mut self, sigmoid: bool) -> Self {
+    #[must_use]
+    pub const fn with_sigmoid(mut self, sigmoid: bool) -> Self {
         self.sigmoid = sigmoid;
         self
     }

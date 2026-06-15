@@ -18,7 +18,7 @@ pub struct Model<B: Backend> {
 }
 
 #[derive(Config, Debug)]
-/// Configuration for constructing a SpectraScribe multi-label classification model.
+/// Configuration for constructing a `SpectraScribe` multi-label classification model.
 pub struct ModelConfig {
     /// Number of element classes predicted by the model.
     num_classes: usize,
@@ -53,7 +53,8 @@ impl ModelConfig {
     }
 
     /// Returns the number of binned intensity features expected by the model.
-    pub fn bin_size(&self) -> usize {
+    #[must_use]
+    pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
 }
@@ -92,5 +93,10 @@ impl<B: Backend> Model<B> {
     /// Returns the optional per-class loss weights.
     pub fn class_weights(&self) -> Option<Vec<f32>> {
         self.class_weights.clone()
+    }
+
+    /// Applies the output activation to raw logits.
+    pub fn activate_logits(&self, logits: Tensor<B, 2>) -> Tensor<B, 2> {
+        self.activation.forward(logits)
     }
 }
