@@ -20,32 +20,37 @@ use burn::{
     },
 };
 
-impl<B: Backend> Model<B> {
-    /// Computes logits, weighted binary cross-entropy loss, and activated multi-label predictions.
-    fn forward_classification(
-        &self,
-        spectra: Tensor<B, 2>,
-        targets: Tensor<B, 2, Int>,
-    ) -> MultiLabelClassificationOutput<B> {
-        let logits = self.forward_logits(spectra);
-        let loss_bce = BinaryCrossEntropyLossConfig::new()
-            .with_logits(true)
-            .with_weights(self.class_weights())
-            .init(&logits.device())
-            .forward(logits.clone(), targets.clone());
+/// Computes logits, weighted binary cross-entropy loss, and activated predictions.
+///
+/// # Parameters
+/// - `model` - Model used to compute logits and predictions.
+/// - `spectra` - Binned spectra features with shape `[batch_size, bin_size]`.
+/// - `targets` - Multi-label element targets with shape `[batch_size, num_classes]`.
+fn forward_classification<B: Backend>(
+    model: &Model<B>,
+    spectra: Tensor<B, 2>,
+    targets: Tensor<B, 2, Int>,
+) -> MultiLabelClassificationOutput<B> {
+    let logits = model.forward_logits(spectra);
 
-        let lambda = 1e-4;
-        let logit_reg = logits.clone().powf_scalar(2.0).mean();
-        let loss = loss_bce + logit_reg * lambda;
-        MultiLabelClassificationOutput::new(loss, self.activation.forward(logits), targets)
-    }
+    let loss_bce = BinaryCrossEntropyLossConfig::new()
+        .with_logits(true)
+        .with_weights(model.class_weights())
+        .init(&logits.device())
+        .forward(logits.clone(), targets.clone());
+
+    let lambda = 1e-4;
+    let logit_regularization = logits.clone().powf_scalar(2.0).mean();
+    let loss = loss_bce + logit_regularization * lambda;
+
+    MultiLabelClassificationOutput::new(loss, model.activate_logits(logits), targets)
 }
 
 impl<B: AutodiffBackend> TrainStep for Model<B> {
     type Input = SpectraScribeBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> burn::train::TrainOutput<Self::Output> {
-        let item = self.forward_classification(batch.spectra, batch.targets);
+        let item = forward_classification(self, batch.spectra, batch.targets);
         TrainOutput::new(self, item.loss.backward(), item)
     }
 }
@@ -54,7 +59,7 @@ impl<B: Backend> InferenceStep for Model<B> {
     type Input = SpectraScribeBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> Self::Output {
-        self.forward_classification(batch.spectra, batch.targets)
+        forward_classification(self, batch.spectra, batch.targets)
     }
 }
 
@@ -91,6 +96,7 @@ impl TrainingConfig {
     /// - `learning_rate` - The optimizer learning rate.
     /// - `class_indices` - The class indices included in this training run,
     ///   referencing `crate::data::ELEMENTS`.
+    #[must_use]
     pub fn new_with_values(
         model: ModelConfig,
         num_epochs: usize,
@@ -113,7 +119,7 @@ impl TrainingConfig {
     }
 
     /// Returns the model configuration used for training.
-    pub(crate) fn model(&self) -> &ModelConfig {
+    pub(crate) const fn model(&self) -> &ModelConfig {
         &self.model
     }
 
@@ -123,29 +129,47 @@ impl TrainingConfig {
     }
 }
 
+/// Recreates the artifact directory for a fresh training run.
+///
+/// # Parameters
+/// - `artifact_dir` - Directory where training artifacts will be written.
 fn create_artifact_dir(artifact_dir: &str) -> Result<(), SpectraError> {
-    // Remove existing artifacts before to get an accurate learner summary
-    std::fs::remove_dir_all(artifact_dir)?;
+    match std::fs::remove_dir_all(artifact_dir) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+
     std::fs::create_dir_all(artifact_dir)?;
+
     Ok(())
 }
 
 /// Trains a model on one holdout split and saves the resulting artifacts.
+///
+/// # Parameters
+/// - `artifact_dir` - Directory where training artifacts will be written.
+/// - `holdout` - Holdout split used for training and validation.
+/// - `config` - Training configuration for this holdout.
+/// - `device` - Backend device used for training.
+///
+/// # Errors
+/// - Returns [`SpectraError`] if artifact directory setup fails.
+/// - Returns [`SpectraError`] if training configuration saving fails.
+/// - Returns [`SpectraError`] if model record saving fails.
 pub fn train_holdout<B, H>(
     artifact_dir: &str,
     holdout: &H,
-    config: TrainingConfig,
-    device: B::Device,
+    config: &TrainingConfig,
+    device: &B::Device,
 ) -> Result<(), SpectraError>
 where
     B: AutodiffBackend,
     H: Holdout,
 {
     create_artifact_dir(artifact_dir)?;
-    config
-        .save(format!("{artifact_dir}/config.json"))
-        .expect("Config should be saved successfully");
-    B::seed(&device, config.seed);
+    config.save(format!("{artifact_dir}/config.json"))?;
+    B::seed(device, config.seed);
 
     let batcher = SpectraScribeBatcher::new(
         holdout.class_indices().to_vec(),
@@ -158,7 +182,7 @@ where
         .num_workers(config.num_workers)
         .build(holdout.train_dataset().clone());
 
-    let dataloader_validation = DataLoaderBuilder::new(batcher.clone())
+    let dataloader_validation = DataLoaderBuilder::new(batcher)
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
@@ -174,7 +198,7 @@ where
         .num_epochs(config.num_epochs)
         .summary();
 
-    let model = config.model.init::<B>(&device);
+    let model = config.model.init::<B>(device);
     let result = training.launch(Learner::new(
         model,
         config.optimizer.init(),
@@ -183,8 +207,7 @@ where
 
     result
         .model
-        .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
-        .expect("Trained model should be saved successfully");
+        .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())?;
 
     Ok(())
 }
