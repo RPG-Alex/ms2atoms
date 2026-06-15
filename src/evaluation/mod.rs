@@ -1,4 +1,6 @@
+/// Confusion-matrix construction utilities.
 pub mod confusion;
+/// Evaluation metric computation utilities.
 pub mod metrics;
 
 pub use confusion::create_confusion_matrices;
