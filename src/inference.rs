@@ -12,10 +12,14 @@ use burn::{
 
 /// Runs inference using a trained model artifact directory.
 ///
-///  # Parameters
+/// # Parameters
 /// - `artifact_dir` - Directory containing `config.json` and the saved model record.
 /// - `device` - Backend device used to load the model and run inference.
 /// - `items` - Spectrum samples to evaluate.
+///
+/// # Errors
+/// - Returns [`SpectraError`] if training configuration loading fails.
+/// - Returns [`SpectraError`] if model record loading fails.
 pub fn infer<B: Backend>(
     artifact_dir: &str,
     device: &B::Device,
