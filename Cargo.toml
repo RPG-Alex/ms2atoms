@@ -40,6 +40,8 @@ rand = { version = "0.10.1", features = ["chacha"] }
 tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread"] }
 serde = "1.0.228"
 csv = "1.4.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 
 [lints.rust]
 warnings = "deny"
@@ -53,11 +55,6 @@ unconditional_recursion = "forbid"
 unused_macro_rules = "forbid"
 
 [lints.clippy]
-broken_intra_doc_links = "deny"
-bare_urls = "deny"
-invalid_codeblock_attributes = "deny"
-invalid_rust_codeblocks = "deny"
-missing_crate_level_docs = "deny"
 unreadable_literal = "allow"
 missing_panics_doc = "allow"
 struct_excessive_bools = "allow"
@@ -76,7 +73,7 @@ unimplemented = "deny"
 dbg_macro = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
-empty_enum = "deny"
+empty_enums = "deny"
 enum_glob_use = "deny"
 exit = "deny"
 fn_to_numeric_cast_any = "deny"
@@ -86,6 +83,6 @@ lossy_float_literal = "deny"
 mem_forget = "deny"
 multiple_inherent_impl = "deny"
 rest_pat_in_fully_bound_structs = "deny"
-string_to_string = "deny"
+implicit_clone = "deny"
 try_err = "deny"
 wildcard_dependencies = "deny"
