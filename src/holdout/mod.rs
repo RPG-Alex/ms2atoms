@@ -1,4 +1,6 @@
+/// Basic holdout implementation
 pub mod basic_holdout;
+/// Holdout reporting utilities
 pub mod report;
 
 pub use basic_holdout::BasicHoldout;
@@ -17,7 +19,7 @@ pub trait Holdout {
     /// Which split this is on, e.g. 0,1,2, ...
     fn holdout_number(&self) -> usize;
     /// the value of the random seed that produced this holdout
-    fn random_seed(&self) -> usize;
+    fn random_seed(&self) -> u64;
     /// Returns the training [`SpectraData`] set
     fn train_dataset(&self) -> &SpectraData;
     /// Returns the validation [`SpectraData`] set
@@ -25,8 +27,8 @@ pub trait Holdout {
     /// Returns a tuple of slices of the training and validation [`SpectrumSample`]
     fn split(&self) -> (&[SpectrumSample], &[SpectrumSample]) {
         (
-            &self.train_dataset().samples(),
-            &self.validation_dataset().samples(),
+            self.train_dataset().samples(),
+            self.validation_dataset().samples(),
         )
     }
     /// the total spectra that are in the holdout's training set

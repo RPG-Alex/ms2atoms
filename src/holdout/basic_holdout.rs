@@ -3,21 +3,31 @@ use super::Holdout;
 use crate::dataset::SpectraData;
 
 #[derive(Clone, Debug)]
+/// Basic concrete holdout split used by experiment protocols.
 pub struct BasicHoldout {
     train: SpectraData,
     validation: SpectraData,
     class_indices: Vec<usize>,
     holdout_number: usize,
-    random_seed: usize,
+    random_seed: u64,
 }
 
 impl BasicHoldout {
-    pub fn new(
+    /// Creates a new basic holdout split.
+    ///
+    /// # Parameters
+    /// - `train` - Training dataset for this holdout.
+    /// - `validation` - Validation dataset for this holdout.
+    /// - `class_indices` - Element class indices included in this holdout.
+    /// - `holdout_number` - Sequential identifier for this holdout.
+    /// - `random_seed` - Random seed used to generate this holdout.
+    #[must_use]
+    pub const fn new(
         train: SpectraData,
         validation: SpectraData,
         class_indices: Vec<usize>,
         holdout_number: usize,
-        random_seed: usize,
+        random_seed: u64,
     ) -> Self {
         Self {
             train,
@@ -38,7 +48,7 @@ impl Holdout for BasicHoldout {
         self.holdout_number
     }
 
-    fn random_seed(&self) -> usize {
+    fn random_seed(&self) -> u64 {
         self.random_seed
     }
 
