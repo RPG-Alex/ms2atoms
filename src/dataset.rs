@@ -21,6 +21,10 @@ impl SpectraData {
     ///
     /// # Parameters
     /// - `bin_size` - Number of fixed-width bins used to represent each spectrum.
+    ///
+    /// # Errors
+    /// - Returns [`SpectraError`] if annotated spectra loading fails.
+    /// - Returns [`SpectraError`] if spectrum binning fails.
     pub fn new(bin_size: usize) -> Result<Self, SpectraError> {
         let data = load_spectra(bin_size)?;
         Ok(Self {
@@ -34,22 +38,26 @@ impl SpectraData {
     /// # Parameters
     /// - `dataset` - Precomputed spectrum samples.
     /// - `bin_size` - Number of bins used to represent each sample spectrum.
+    #[must_use]
     pub const fn from_samples(dataset: Vec<SpectrumSample>, bin_size: usize) -> Self {
         Self { dataset, bin_size }
     }
 
     /// Returns all spectrum samples in this dataset.
+    #[must_use]
     pub fn samples(&self) -> &[SpectrumSample] {
         &self.dataset
     }
 
     /// Returns the number of samples in this dataset.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.dataset.len()
     }
 
     /// Returns whether this dataset contains no samples.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.dataset.is_empty()
     }
 
@@ -58,14 +66,17 @@ impl SpectraData {
     /// # Parameters
     /// - `class_indices` - Element class indices to compute weights for.
     /// - `weight_range` - Minimum and maximum class-weight values.
+    ///
+    /// # Errors
+    /// - Returns [`SpectraError`] if a class index is invalid.
     pub fn class_weights_for(
         &self,
         class_indices: &[usize],
         weight_range: (f32, f32),
     ) -> Result<Vec<f32>, SpectraError> {
         let (min_weight, max_weight) = weight_range;
-        let n_samples = self.dataset.len() as f32;
-        let n_classes = class_indices.len() as f32;
+        let n_samples = count_as_f32(self.dataset.len());
+        let n_classes = count_as_f32(class_indices.len());
         let mut weights = Vec::with_capacity(class_indices.len());
 
         for &class_index in class_indices {
@@ -83,9 +94,9 @@ impl SpectraData {
                         .copied()
                         .unwrap_or(false)
                 })
-                .count() as f32;
+                .count();
 
-            let positive_count = positive_count.max(1.0);
+            let positive_count = count_as_f32(positive_count);
             let weight = n_samples / (positive_count * n_classes);
 
             weights.push(weight.clamp(min_weight, max_weight));
@@ -94,23 +105,32 @@ impl SpectraData {
     }
 
     /// Returns the number of bins used by each spectrum sample.
+    #[must_use]
     pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
+}
+
+/// Converts a count into `f32` for class-weight computation.
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "Class-weight computation uses dataset counts far below the precision limit of f32."
+)]
+const fn count_as_f32(count: usize) -> f32 {
+    count as f32
 }
 
 /// Returns the element class indices observed in the provided samples.
 ///
 /// # Parameters
 /// - `samples` - Spectrum samples to scan for observed element classes.
+#[must_use]
 pub fn observed_class_indices(samples: &[SpectrumSample]) -> Vec<usize> {
     let mut observed = vec![false; ELEMENT_COUNT];
     for sample in samples {
         for (index, present) in sample.element_present().iter().enumerate() {
-            if *present {
-                if let Some(observed_class) = observed.get_mut(index) {
-                    *observed_class = true;
-                }
+            if *present && let Some(observed_class) = observed.get_mut(index) {
+                *observed_class = true;
             }
         }
     }

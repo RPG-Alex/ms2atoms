@@ -14,6 +14,7 @@ impl SpectraScribeBatcher {
     /// # Parameters
     /// - `class_indices` - Element class indices to include as prediction targets.
     /// - `bin_size` - Number of binned intensity features in each spectrum.
+    #[must_use]
     pub const fn new(class_indices: Vec<usize>, bin_size: usize) -> Self {
         Self {
             class_indices,
@@ -22,16 +23,19 @@ impl SpectraScribeBatcher {
     }
 
     /// Returns the number of element classes produced by this batcher.
+    #[must_use]
     pub const fn num_classes(&self) -> usize {
         self.class_indices.len()
     }
 
     /// Returns the number of binned intensity features expected per spectrum.
+    #[must_use]
     pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
 
     /// Returns the element class indices included by this batcher.
+    #[must_use]
     pub fn class_indices(&self) -> &[usize] {
         &self.class_indices
     }
@@ -184,6 +188,7 @@ impl SpectrumSample {
     /// # Parameters
     /// - `spectra` - Binned spectrum intensity values.
     /// - `element_present` - Fixed-width element-presence labels aligned with [`ELEMENTS`].
+    #[must_use]
     pub const fn new(spectra: Vec<f64>, element_present: [bool; ELEMENT_COUNT]) -> Self {
         Self {
             spectra,
@@ -191,11 +196,13 @@ impl SpectrumSample {
         }
     }
     /// Returns the binned spectrum intensity values.
+    #[must_use]
     pub fn spectra(&self) -> &[f64] {
         &self.spectra
     }
 
     /// Returns all element-presence labels for this sample.
+    #[must_use]
     pub const fn element_present(&self) -> &[bool; ELEMENT_COUNT] {
         &self.element_present
     }
@@ -205,6 +212,7 @@ impl SpectrumSample {
     /// # Parameters
     ///
     /// - `class_index` - Index into [`ELEMENTS`].
+    #[must_use]
     pub fn is_element_present(&self, class_index: usize) -> Option<bool> {
         self.element_present.get(class_index).copied()
     }
