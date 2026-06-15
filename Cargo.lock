@@ -492,7 +492,6 @@ dependencies = [
  "burn-cuda",
  "burn-dispatch",
  "burn-flex",
- "burn-ir",
  "burn-ndarray",
  "burn-nn",
  "burn-optim",
@@ -1018,7 +1017,6 @@ dependencies = [
  "aligned-vec",
  "bon",
  "burn-cubecl",
- "burn-fusion",
  "burn-ir",
  "burn-tensor",
  "bytemuck",
@@ -6292,6 +6290,8 @@ dependencies = [
  "rand 0.10.1",
  "serde",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

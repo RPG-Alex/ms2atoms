@@ -1,0 +1,2 @@
+experiment,holdout,seed,threshold,threshold_label,macro_precision,macro_recall,macro_f1,macro_mcc,micro_precision,micro_recall,micro_f1,micro_mcc
+experiment01_single-holdout-baseline,0,106,0.5,0_50,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

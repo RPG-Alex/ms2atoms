@@ -22,14 +22,12 @@ categories = [
 
 [dependencies]
 burn = { version = "0.21.0", features = [
-  "fusion",
   "metrics",
   "std",
   "train",
   "tui",
   "vision",
   "wgpu",
-  "autotune",
 ] }
 elements_rs = "0.2.7"
 mascot-rs = { git = "https://github.com/LucaCappelletti94/mascot-rs" }
