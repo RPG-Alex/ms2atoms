@@ -1,16 +1,16 @@
-[![Rust CI](https://github.com/RPG-Alex/SpectraScribe/actions/workflows/rust.yml/badge.svg)](https://github.com/RPG-Alex/SpectraScribe/actions/workflows/rust.yml)
+[![Rust CI](https://github.com/RPG-Alex/ms2atoms/actions/workflows/rust.yml/badge.svg)](https://github.com/RPG-Alex/ms2atoms/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![codecov](https://codecov.io/gh/RPG-Alex/SpectraScribe/branch/main/graph/badge.svg)](https://codecov.io/gh/RPG-Alex/SpectraScribe)
+[![codecov](https://codecov.io/gh/RPG-Alex/ms2atoms/branch/main/graph/badge.svg)](https://codecov.io/gh/RPG-Alex/ms2atoms)
 
 # spectra scribe
 
-SpectraScribe is a Rust research prototype for training and evaluating machine-learning models for MS/MS element identification. It uses the [Burn](https://burn.dev/) deep-learning framework to learn multi-label element predictions from binned tandem mass spectra.
+ms2atoms is a Rust research prototype for training and evaluating machine-learning models for MS/MS element identification. It uses the [Burn](https://burn.dev/) deep-learning framework to learn multi-label element predictions from binned tandem mass spectra.
 
 The current focus is to make the experimental pipeline discrete, reproducible, and easy enough for collaborators to inspect before discussing broader experimental questions.
 
 ## What it does
 
-SpectraScribe currently runs a baseline MS/MS element-detection experiment:
+ms2atoms currently runs a baseline MS/MS element-detection experiment:
 
 1. Load annotated MS2 spectra.
 2. Convert spectra into fixed-width binned intensity vectors.
@@ -23,8 +23,8 @@ SpectraScribe currently runs a baseline MS/MS element-detection experiment:
 ## Getting started
 
 ```bash
-git clone https://github.com/RPG-Alex/SpectraScribe.git
-cd SpectraScribe
+git clone https://github.com/RPG-Alex/ms2atoms.git
+cd ms2atoms
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features
 cargo test --all-targets --all-features
@@ -33,7 +33,7 @@ cargo run --release
 
 ## Research status
 
-SpectraScribe is an exploratory research tool. Model architecture, input representation, thresholds, class weighting, and evaluation protocol are expected to change as the experimental task becomes clearer.
+ms2atoms is an exploratory research tool. Model architecture, input representation, thresholds, class weighting, and evaluation protocol are expected to change as the experimental task becomes clearer.
 
 ## License
 
