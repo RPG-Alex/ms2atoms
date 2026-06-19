@@ -275,3 +275,34 @@ fn count_positive_samples(samples: &[SpectrumSample], class_index: usize) -> usi
 const fn holdout_seed(base_seed: u64, holdout_number: usize, attempt: usize) -> u64 {
     base_seed + holdout_number as u64 * 10_000 + attempt as u64
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use proptest::prelude::*;
+    use proptest::test_runner::TestCaseError;
+
+    use super::*;
+    use crate::data::ELEMENT_COUNT;
+
+    const BIN_SIZE: usize = 1;
+    const TEST_CLASS_INDEX: usize = 0;
+
+    fn sample(id: usize, class_present: bool) -> SpectrumSample {
+        let mut element_present = [false; ELEMENT_COUNT];
+        if let Some(present) = element_present.get_mut(TEST_CLASS_INDEX) {
+            *present = class_present;
+        }
+        SpectrumSample::new(vec![id_as_f64(id)], element_present)
+    }
+
+    #[allow(clippy::cast_precision_loss, reason = "Test samples")]
+    fn id_as_f64(id: usize) -> f64 {
+        id as f64
+    }
+    fn sample_id(sample: &SpectrumSample) -> usize {
+        sample.spectra().first().copied().unwrap_or_default() as usize
+    }
+}
