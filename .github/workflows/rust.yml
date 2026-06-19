@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -32,6 +35,7 @@ jobs:
             rust: stable
             experimental: false
           - os: macos-latest
+            rust: stable
             experimental: false
           - os: ubuntu-latest
             rust: beta
@@ -85,6 +89,18 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Check documentation
         run: cargo doc --locked --no-deps --document-private-items --all-features
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+      - name: Audit dependencies
+        run: cargo audit --locked
 
   coverage:
     name: Code Coverage

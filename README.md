@@ -2,7 +2,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/RPG-Alex/ms2atoms/branch/main/graph/badge.svg)](https://codecov.io/gh/RPG-Alex/ms2atoms)
 
-# spectra scribe
+# ms2atoms
 
 ms2atoms is a Rust research prototype for training and evaluating machine-learning models for MS/MS element identification. It uses the [Burn](https://burn.dev/) deep-learning framework to learn multi-label element predictions from binned tandem mass spectra.
 
