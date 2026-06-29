@@ -36,6 +36,6 @@ pub mod inference;
 /// [Matthews correlation coefficient](https://en.wikipedia.org/wiki/Phi_coefficient) utilities.
 pub mod mcc;
 /// Model architecture and model configuration.
-pub mod model;
+pub mod models;
 /// Training configuration and holdout training routines.
 pub mod training;

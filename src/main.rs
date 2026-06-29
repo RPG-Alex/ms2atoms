@@ -1,6 +1,6 @@
 //! Command-line entry point for running `SpectraScribe` experiments.
 
-use spectra_scribe::{error::SpectraError, experiments::experiment1};
+use ms2atoms::{error::SpectraError, experiments::experiment1};
 use tracing_subscriber::{EnvFilter, fmt};
 
 fn main() -> Result<(), SpectraError> {

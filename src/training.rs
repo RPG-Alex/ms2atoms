@@ -3,7 +3,7 @@ use crate::{
     error::SpectraError,
     holdout::Holdout,
     mcc::MatthewsCorrelationMetric,
-    model::{Model, ModelConfig},
+    models::mlp::{MLPConfig, MLPModel},
 };
 
 use burn::{
@@ -27,7 +27,7 @@ use burn::{
 /// - `spectra` - Binned spectra features with shape `[batch_size, bin_size]`.
 /// - `targets` - Multi-label element targets with shape `[batch_size, num_classes]`.
 fn forward_classification<B: Backend>(
-    model: &Model<B>,
+    model: &MLPModel<B>,
     spectra: Tensor<B, 2>,
     targets: Tensor<B, 2, Int>,
 ) -> MultiLabelClassificationOutput<B> {
@@ -46,7 +46,7 @@ fn forward_classification<B: Backend>(
     MultiLabelClassificationOutput::new(loss, model.activate_logits(logits), targets)
 }
 
-impl<B: AutodiffBackend> TrainStep for Model<B> {
+impl<B: AutodiffBackend> TrainStep for MLPModel<B> {
     type Input = SpectraScribeBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> burn::train::TrainOutput<Self::Output> {
@@ -55,7 +55,7 @@ impl<B: AutodiffBackend> TrainStep for Model<B> {
     }
 }
 
-impl<B: Backend> InferenceStep for Model<B> {
+impl<B: Backend> InferenceStep for MLPModel<B> {
     type Input = SpectraScribeBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> Self::Output {
@@ -67,7 +67,7 @@ impl<B: Backend> InferenceStep for Model<B> {
 /// Configuration used to train one model on one holdout split.
 pub struct TrainingConfig {
     /// Model architecture and initialization settings.
-    model: ModelConfig,
+    model: MLPConfig,
     /// Optimizer configuration used during training.
     optimizer: AdamConfig,
     /// Number of training epochs.
@@ -98,7 +98,7 @@ impl TrainingConfig {
     ///   referencing `crate::data::ELEMENTS`.
     #[must_use]
     pub fn new_with_values(
-        model: ModelConfig,
+        model: MLPConfig,
         num_epochs: usize,
         batch_size: usize,
         num_workers: usize,
@@ -119,7 +119,7 @@ impl TrainingConfig {
     }
 
     /// Returns the model configuration used for training.
-    pub(crate) const fn model(&self) -> &ModelConfig {
+    pub(crate) const fn model(&self) -> &MLPConfig {
         &self.model
     }
 

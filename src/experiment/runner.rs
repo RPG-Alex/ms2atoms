@@ -22,7 +22,7 @@ use crate::{
         protocol::ExperimentProtocol,
     },
     holdout::{Holdout, class_distribution_report},
-    model::ModelConfig,
+    models::mlp::MLPConfig,
     training::TrainingConfig,
 };
 
@@ -195,7 +195,7 @@ where
         ),
     };
 
-    let model_config = ModelConfig::new(
+    let model_config = MLPConfig::new(
         holdout.num_classes(),
         config.model.hidden_size,
         config.features.bin_size,

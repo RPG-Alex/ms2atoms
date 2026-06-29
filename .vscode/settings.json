@@ -1,3 +1,4 @@
 {
-    "rust-analyzer.diagnostics.useRustcErrorCode": true
+    "rust-analyzer.diagnostics.useRustcErrorCode": true,
+    "salt.errorLogging": false
 }

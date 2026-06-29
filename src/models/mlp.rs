@@ -19,7 +19,7 @@ pub struct MLPModel<B: Backend> {
 
 #[derive(Config, Debug)]
 /// Configuration for constructing a `SpectraScribe` multi-label classification model.
-pub struct ModelConfig {
+pub struct MLPConfig {
     /// Number of element classes predicted by the model.
     num_classes: usize,
     /// Number of neurons in the first hidden layer.
@@ -32,14 +32,14 @@ pub struct ModelConfig {
     class_weights: Option<Vec<f32>>,
 }
 
-impl ModelConfig {
+impl MLPConfig {
     /// Initializes a [`Model`] from this configuration on the provided backend device.
     ///
     /// # Parameters
     ///
     /// - `device` - The backend device used to initialize model parameters.
-    pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
-        Model {
+    pub fn init<B: Backend>(&self, device: &B::Device) -> MLPModel<B> {
+        MLPModel {
             linear1: LinearConfig::new(self.bin_size, self.hidden_size).init(device),
             batch_norm1: BatchNormConfig::new(self.hidden_size).init(device),
             linear2: LinearConfig::new(self.hidden_size, self.hidden_size / 2).init(device),
@@ -59,7 +59,7 @@ impl ModelConfig {
     }
 }
 
-impl<B: Backend> Model<B> {
+impl<B: Backend> MLPModel<B> {
     /// Computes raw element-class logits for a batch of binned spectra.
     ///
     /// # Parameters
