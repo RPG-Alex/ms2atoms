@@ -1,9 +1,7 @@
 use crate::{
-    data::{SpectraScribeBatch, SpectraScribeBatcher},
     error::SpectraError,
     holdout::Holdout,
-    mcc::MatthewsCorrelationMetric,
-    models::mlp::{MLPConfig, MLPModel},
+    models::{mlp::{MLPConfig, MLPModel}, burn::{batcher::{ElementBatch, ElementBatcher}, mcc::MatthewsCorrelationMetric,}},
 };
 
 use burn::{
@@ -47,7 +45,7 @@ fn forward_classification<B: Backend>(
 }
 
 impl<B: AutodiffBackend> TrainStep for MLPModel<B> {
-    type Input = SpectraScribeBatch<B>;
+    type Input = ElementBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> burn::train::TrainOutput<Self::Output> {
         let item = forward_classification(self, batch.spectra, batch.targets);
@@ -56,7 +54,7 @@ impl<B: AutodiffBackend> TrainStep for MLPModel<B> {
 }
 
 impl<B: Backend> InferenceStep for MLPModel<B> {
-    type Input = SpectraScribeBatch<B>;
+    type Input = ElementBatch<B>;
     type Output = MultiLabelClassificationOutput<B>;
     fn step(&self, batch: Self::Input) -> Self::Output {
         forward_classification(self, batch.spectra, batch.targets)
@@ -171,7 +169,7 @@ where
     config.save(format!("{artifact_dir}/config.json"))?;
     B::seed(device, config.seed);
 
-    let batcher = SpectraScribeBatcher::new(
+    let batcher = ElementBatcher::new(
         holdout.class_indices().to_vec(),
         holdout.train_dataset().bin_size(),
     );

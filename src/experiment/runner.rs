@@ -11,19 +11,13 @@ use serde::Serialize;
 use tracing::info;
 
 use crate::{
-    dataset::SpectraData,
-    error::SpectraError,
-    evaluation::{
+    dataset::SpectraData, error::SpectraError, evaluation::{
         aggregate_metrics, confusion::ConfusionMatrix, create_confusion_matrices,
         element_metrics_from_matrices, metrics::AggregateMetrics,
-    },
-    experiment::{
+    }, experiment::{
         config::{ClassWeighting, ExperimentConfig},
         protocol::ExperimentProtocol,
-    },
-    holdout::{Holdout, class_distribution_report},
-    models::mlp::MLPConfig,
-    training::TrainingConfig,
+    }, holdout::{Holdout, class_distribution_report}, models::{burn::{inference, training::{TrainingConfig, train_holdout}}, mlp::MLPConfig},
 };
 
 type MyBackend = Wgpu<f32, i32>;
@@ -147,7 +141,7 @@ where
 
     let training_config = training_config_for_holdout(config, holdout)?;
 
-    crate::training::train_holdout::<MyAutodiffBackend, _>(
+    train_holdout::<MyAutodiffBackend, _>(
         &artifact_dir_string,
         holdout,
         &training_config,
@@ -155,7 +149,7 @@ where
     )?;
 
     let validation_items = holdout.validation_dataset().samples().to_vec();
-    let predictions = crate::inference::infer::<MyBackend>(
+    let predictions = inference::infer::<MyBackend>(
         &artifact_dir_string,
         device,
         validation_items.clone(),

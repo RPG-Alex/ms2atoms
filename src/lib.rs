@@ -31,11 +31,6 @@ pub mod experiment;
 pub mod experiments;
 /// Holdout generation and class-distribution reporting.
 pub mod holdout;
-/// Inference utilities for loading trained models and generating predictions.
-pub mod inference;
-/// [Matthews correlation coefficient](https://en.wikipedia.org/wiki/Phi_coefficient) utilities.
-pub mod mcc;
 /// Model architecture and model configuration.
 pub mod models;
-/// Training configuration and holdout training routines.
-pub mod training;
+

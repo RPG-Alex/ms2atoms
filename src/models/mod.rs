@@ -4,6 +4,8 @@
 pub mod logistic_regression;
 /// The MLP Burn model implementation
 pub mod mlp;
+/// Model implementations specific to working with Burn
+pub mod burn;
 
 /// Trait defining the shared interface for all models.
 ///

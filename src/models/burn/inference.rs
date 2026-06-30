@@ -1,7 +1,5 @@
 use crate::{
-    data::{SpectraScribeBatcher, SpectrumSample},
-    error::SpectraError,
-    training::TrainingConfig,
+    data::SpectrumSample, error::SpectraError, models::burn::{batcher::ElementBatcher, training::TrainingConfig},
 };
 
 use burn::{
@@ -31,7 +29,7 @@ pub fn infer<B: Backend>(
     let model = config.model().init::<B>(device).load_record(record);
 
     let batcher =
-        SpectraScribeBatcher::new(config.class_indices().to_vec(), config.model().bin_size());
+        ElementBatcher::new(config.class_indices().to_vec(), config.model().bin_size());
     let batch = batcher.batch(items, device);
     Ok(model.forward(batch.spectra))
 }

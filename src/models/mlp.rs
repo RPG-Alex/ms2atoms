@@ -3,6 +3,8 @@ use burn::{
     prelude::*,
 };
 
+use crate::models::Model;
+
 #[derive(Module, Debug)]
 /// Definition for the model
 pub struct MLPModel<B: Backend> {
@@ -98,5 +100,22 @@ impl<B: Backend> MLPModel<B> {
     /// Applies the output activation to raw logits.
     pub fn activate_logits(&self, logits: Tensor<B, 2>) -> Tensor<B, 2> {
         self.activation.forward(logits)
+    }
+}
+
+
+impl<B: Backend> Model for MLPModel<B> {
+    type Input = Tensor<B, 2>;
+
+    type Output = Tensor<B, 2>;
+
+    type Trained = MLPModel<B>;
+
+    fn train(&self, data: Self::Input) -> Self::Trained {
+        todo!()
+    }
+
+    fn predict(&self, model: &Self::Trained, input: Self::Input) -> Self::Output {
+        model.forward(input)
     }
 }
