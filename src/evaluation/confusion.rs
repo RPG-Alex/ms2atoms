@@ -1,11 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    data::{ELEMENTS, SpectrumSample},
-    error::SpectraError,
+    domain::{elements::ELEMENTS, sample::SpectrumSample},
+    error::Ms2AtomsError,
+    evaluation::prediction::PredictionMatrix,
 };
-
-use burn::{prelude::*, tensor::Transaction};
 
 /// Per-element confusion-matrix counts for one evaluation threshold.
 #[derive(Serialize, Deserialize, Debug)]
@@ -39,70 +38,65 @@ impl ConfusionMatrix {
     }
 }
 
-/// Creates per-element confusion matrices from model predictions.
+/// Creates per-element confusion matrices from model-agnostic prediction scores.
 ///
 /// # Parameters
-/// - `predictions` - Model prediction tensor as `[n_samples, n_classes]`.
+/// - `predictions` - Prediction scores as `[n_samples, n_classes]`.
 /// - `items` - Spectrum samples corresponding to the prediction rows.
-/// - `class_indices` - Element class indices corresponding to prediction columns.
 /// - `threshold` - Decision threshold used to convert prediction scores into labels.
 ///
 /// # Errors
-/// - Returns [`SpectraError`] if an element class index is invalid.
-/// - Returns [`SpectraError`] if prediction tensor extraction fails.
-/// - Returns [`SpectraError`] if a prediction row is missing an expected class value.
-/// - Returns [`SpectraError`] if a sample is missing an expected element label.
-/// - Returns [`SpectraError`] if a thresholded prediction is not binary.
-pub fn create_confusion_matrices<B: Backend>(
-    predictions: Tensor<B, 2>,
+/// Returns [`Ms2AtomsError`] if class indices, prediction rows, or sample labels are invalid.
+pub fn create_confusion_matrices(
+    predictions: &PredictionMatrix,
     items: &[SpectrumSample],
-    class_indices: &[usize],
     threshold: f64,
-) -> Result<Vec<ConfusionMatrix>, SpectraError> {
+) -> Result<Vec<ConfusionMatrix>, Ms2AtomsError> {
+    if predictions.len() != items.len() {
+        return Err(Ms2AtomsError::InconsistentFeatureLength {
+            expected: items.len(),
+            actual: predictions.len(),
+        });
+    }
+
+    let class_indices = predictions.class_indices();
     let mut confusion_matrices = Vec::with_capacity(class_indices.len());
 
     for &class_index in class_indices {
         let element = ELEMENTS
             .get(class_index)
-            .ok_or(SpectraError::InvalidArray)?
+            .ok_or(Ms2AtomsError::InvalidClassIndex { class_index })?
             .symbol()
             .to_owned();
 
         confusion_matrices.push(ConfusionMatrix::new(element));
     }
 
-    let predicted_tensor = predictions.greater_elem(threshold).int();
-    let prediction_rows = predicted_tensor.iter_dim(0);
+    for (prediction_row, sample) in predictions.scores().iter().zip(items.iter()) {
+        if prediction_row.len() != class_indices.len() {
+            return Err(Ms2AtomsError::InconsistentFeatureLength {
+                expected: class_indices.len(),
+                actual: prediction_row.len(),
+            });
+        }
 
-    for (prediction_row, sample) in prediction_rows.zip(items.iter()) {
-        let [output_data] = Transaction::default()
-            .register(prediction_row)
-            .execute()
-            .try_into()
-            .map_err(|_| SpectraError::InvalidArray)?;
-
-        let predicted_values = output_data.as_slice::<i32>()?;
-
-        for (prediction_column, &class_index) in class_indices.iter().enumerate() {
-            let predicted_atom = predicted_values
-                .get(prediction_column)
-                .copied()
-                .ok_or(SpectraError::InvalidArray)?;
-
+        for (prediction_column, (&class_index, &score)) in
+            class_indices.iter().zip(prediction_row.iter()).enumerate()
+        {
+            let predicted_atom = score > threshold;
             let true_atom = sample
                 .is_element_present(class_index)
-                .ok_or(SpectraError::InvalidArray)?;
+                .ok_or(Ms2AtomsError::InvalidClassIndex { class_index })?;
 
             let matrix = confusion_matrices
                 .get_mut(prediction_column)
-                .ok_or(SpectraError::InvalidArray)?;
+                .ok_or(Ms2AtomsError::InvalidArray)?;
 
             match (predicted_atom, true_atom) {
-                (1, true) => matrix.true_positive += 1,
-                (0, false) => matrix.true_negative += 1,
-                (1, false) => matrix.false_positive += 1,
-                (0, true) => matrix.false_negative += 1,
-                _ => return Err(SpectraError::InvalidArray),
+                (true, true) => matrix.true_positive += 1,
+                (false, false) => matrix.true_negative += 1,
+                (true, false) => matrix.false_positive += 1,
+                (false, true) => matrix.false_negative += 1,
             }
         }
     }

@@ -1,8 +1,8 @@
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
-    data::SpectrumSample,
     dataset::{SpectraData, observed_class_indices},
+    domain::sample::SpectrumSample,
     holdout::{BasicHoldout, Holdout},
 };
 
@@ -32,7 +32,6 @@ pub trait ExperimentProtocol {
     /// Generates holdout splits from the provided dataset.
     ///
     /// # Parameters
-    ///
     /// - `dataset` - Dataset to split into train/validation holdouts.
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType>;
 }
@@ -41,10 +40,8 @@ pub trait ExperimentProtocol {
 pub struct RandomSplitProtocol {
     /// Number of holdout splits to generate.
     pub number_of_holdouts: usize,
-
     /// Base random seed used to generate holdout splits.
     pub random_seed: u64,
-
     /// Fraction of samples assigned to training.
     pub training_size: f32,
 }
@@ -90,13 +87,10 @@ impl ExperimentProtocol for RandomSplitProtocol {
 pub struct StratifiedRetryProtocol {
     /// Number of holdout splits to generate.
     pub number_of_holdouts: usize,
-
     /// Base random seed used to generate holdout splits.
     pub random_seed: u64,
-
     /// Fraction of samples assigned to training.
     pub training_size: f32,
-
     /// Number of random split attempts evaluated for each holdout.
     pub retries_per_holdout: usize,
 }
@@ -200,10 +194,6 @@ fn random_split(
 }
 
 /// Computes the number of samples assigned to the training split.
-///
-/// # Parameters
-/// - `sample_count` - Total number of samples available for splitting.
-/// - `training_size` - Fraction of samples to assign to the training split.
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,

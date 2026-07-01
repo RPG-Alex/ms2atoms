@@ -1,6 +1,13 @@
-use burn::{Tensor, data::dataloader::batcher::Batcher, tensor::{Bool, Int, TensorData, backend::{Backend, BackendTypes}}};
+use burn::{
+    Tensor,
+    data::dataloader::batcher::Batcher,
+    tensor::{
+        Bool, Int, TensorData,
+        backend::{Backend, BackendTypes},
+    },
+};
 
-use crate::data::SpectrumSample;
+use crate::domain::sample::SpectrumSample;
 
 #[derive(Clone)]
 /// Converts [`SpectrumSample`] values into Burn training batches.
@@ -63,6 +70,7 @@ impl<B: Backend> Batcher<B, SpectrumSample, ElementBatch<B>> for ElementBatcher 
             .map(|data| Tensor::<B, 1>::from_data(data, device))
             .map(|tensor| tensor.reshape([1, self.bin_size()]))
             .collect();
+
         let targets = items
             .iter()
             .map(|item| {
@@ -71,13 +79,16 @@ impl<B: Backend> Batcher<B, SpectrumSample, ElementBatch<B>> for ElementBatcher 
                     .iter()
                     .map(|&class_index| item.is_element_present(class_index).unwrap_or(false))
                     .collect::<Vec<_>>();
+
                 Tensor::<B, 1, Bool>::from_data(selected_targets.as_slice(), device)
                     .reshape([1, self.num_classes()])
                     .int()
             })
             .collect();
+
         let spectra = Tensor::cat(spectra, 0);
         let targets = Tensor::cat(targets, 0);
+
         ElementBatch { spectra, targets }
     }
 }

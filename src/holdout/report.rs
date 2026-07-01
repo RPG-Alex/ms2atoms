@@ -1,15 +1,15 @@
 use serde::Serialize;
 
 use crate::{
-    data::{ELEMENTS, SpectrumSample},
-    error::SpectraError,
+    domain::{elements::ELEMENTS, sample::SpectrumSample},
+    error::Ms2AtomsError,
     holdout::Holdout,
 };
 
 #[derive(Debug, Serialize)]
 /// Per-element class-balance report for one holdout split.
 pub struct ClassDistribution {
-    /// Index of the element class in `crate::data::ELEMENTS`.
+    /// Index of the element class in the crate element list.
     pub class_index: usize,
     /// Chemical symbol for the element class.
     pub element: String,
@@ -33,19 +33,17 @@ pub struct ClassDistribution {
 /// - `holdout` - Holdout split to inspect for class-balance reporting.
 ///
 /// # Errors
-/// - Returns [`SpectraError`] if a holdout class index is invalid.
+/// Returns [`Ms2AtomsError`] if a holdout class index is invalid.
 pub fn class_distribution_report<H: Holdout>(
     holdout: &H,
-) -> Result<Vec<ClassDistribution>, SpectraError> {
+) -> Result<Vec<ClassDistribution>, Ms2AtomsError> {
     holdout
         .class_indices()
         .iter()
         .map(|&class_index| {
             let element = element_symbol(class_index)?;
-
             let train_positive =
                 count_positive_samples(holdout.train_dataset().samples(), class_index)?;
-
             let validation_positive =
                 count_positive_samples(holdout.validation_dataset().samples(), class_index)?;
 
@@ -74,10 +72,10 @@ pub fn class_distribution_report<H: Holdout>(
 }
 
 /// Returns the chemical symbol for one element class index.
-fn element_symbol(class_index: usize) -> Result<String, SpectraError> {
+fn element_symbol(class_index: usize) -> Result<String, Ms2AtomsError> {
     Ok(ELEMENTS
         .get(class_index)
-        .ok_or(SpectraError::InvalidArray)?
+        .ok_or(Ms2AtomsError::InvalidClassIndex { class_index })?
         .symbol()
         .to_owned())
 }
@@ -86,11 +84,11 @@ fn element_symbol(class_index: usize) -> Result<String, SpectraError> {
 fn count_positive_samples(
     samples: &[SpectrumSample],
     class_index: usize,
-) -> Result<usize, SpectraError> {
+) -> Result<usize, Ms2AtomsError> {
     samples.iter().try_fold(0, |count, sample| {
         let is_present = sample
             .is_element_present(class_index)
-            .ok_or(SpectraError::InvalidArray)?;
+            .ok_or(Ms2AtomsError::InvalidClassIndex { class_index })?;
 
         Ok(if is_present { count + 1 } else { count })
     })

@@ -3,10 +3,8 @@ use burn::{
     prelude::*,
 };
 
-use crate::models::Model;
-
 #[derive(Module, Debug)]
-/// Definition for the model
+/// Burn implementation of the MLP multi-label element classifier.
 pub struct MLPModel<B: Backend> {
     linear1: Linear<B>,
     batch_norm1: BatchNorm<B>,
@@ -15,12 +13,12 @@ pub struct MLPModel<B: Backend> {
     linear3: Linear<B>,
     dropout: Dropout,
     inner_activation: Relu,
-    pub(crate) activation: Sigmoid,
+    activation: Sigmoid,
     class_weights: Option<Vec<f32>>,
 }
 
 #[derive(Config, Debug)]
-/// Configuration for constructing a `SpectraScribe` multi-label classification model.
+/// Configuration for constructing a Burn MLP multi-label classification model.
 pub struct MLPConfig {
     /// Number of element classes predicted by the model.
     num_classes: usize,
@@ -35,10 +33,9 @@ pub struct MLPConfig {
 }
 
 impl MLPConfig {
-    /// Initializes a [`Model`] from this configuration on the provided backend device.
+    /// Initializes an MLP model from this configuration on the provided backend device.
     ///
     /// # Parameters
-    ///
     /// - `device` - The backend device used to initialize model parameters.
     pub fn init<B: Backend>(&self, device: &B::Device) -> MLPModel<B> {
         MLPModel {
@@ -59,6 +56,12 @@ impl MLPConfig {
     pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
+
+    /// Returns the number of element classes predicted by the model.
+    #[must_use]
+    pub const fn num_classes(&self) -> usize {
+        self.num_classes
+    }
 }
 
 impl<B: Backend> MLPModel<B> {
@@ -70,7 +73,6 @@ impl<B: Backend> MLPModel<B> {
         let [batch_size, binned_spectrum_size] = spectra.dims();
 
         let x = spectra.reshape([batch_size, binned_spectrum_size]);
-
         let x = self.linear1.forward(x);
         let x = self.batch_norm1.forward(x);
         let x = self.inner_activation.forward(x);
@@ -100,22 +102,5 @@ impl<B: Backend> MLPModel<B> {
     /// Applies the output activation to raw logits.
     pub fn activate_logits(&self, logits: Tensor<B, 2>) -> Tensor<B, 2> {
         self.activation.forward(logits)
-    }
-}
-
-
-impl<B: Backend> Model for MLPModel<B> {
-    type Input = Tensor<B, 2>;
-
-    type Output = Tensor<B, 2>;
-
-    type Trained = MLPModel<B>;
-
-    fn train(&self, data: Self::Input) -> Self::Trained {
-        todo!()
-    }
-
-    fn predict(&self, model: &Self::Trained, input: Self::Input) -> Self::Output {
-        model.forward(input)
     }
 }

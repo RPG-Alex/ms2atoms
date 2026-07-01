@@ -1,6 +1,6 @@
-use super::Holdout;
-
 use crate::dataset::SpectraData;
+
+use super::Holdout;
 
 #[derive(Clone, Debug)]
 /// Basic concrete holdout split used by experiment protocols.

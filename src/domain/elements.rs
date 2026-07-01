@@ -1,4 +1,4 @@
-use molecular_formulas::prelude::*;
+use molecular_formulas::prelude::Element;
 
 /// Ordered list of elements used as model output classes.
 pub const ELEMENTS: &[Element; 118] = &[
@@ -124,47 +124,3 @@ pub const ELEMENTS: &[Element; 118] = &[
 
 /// Number of supported element classes.
 pub const ELEMENT_COUNT: usize = ELEMENTS.len();
-
-#[derive(Clone, Debug)]
-/// One preprocessed MS/MS spectrum sample and its element-presence labels.
-pub struct SpectrumSample {
-    spectra: Vec<f64>,
-    element_present: [bool; ELEMENT_COUNT],
-}
-
-impl SpectrumSample {
-    /// Creates a new spectrum sample from binned intensities and element labels.
-    ///
-    /// # Parameters
-    /// - `spectra` - Binned spectrum intensity values.
-    /// - `element_present` - Fixed-width element-presence labels aligned with [`ELEMENTS`].
-    #[must_use]
-    pub const fn new(spectra: Vec<f64>, element_present: [bool; ELEMENT_COUNT]) -> Self {
-        Self {
-            spectra,
-            element_present,
-        }
-    }
-    /// Returns the binned spectrum intensity values.
-    #[must_use]
-    pub fn spectra(&self) -> &[f64] {
-        &self.spectra
-    }
-
-    /// Returns all element-presence labels for this sample.
-    #[must_use]
-    pub const fn element_present(&self) -> &[bool; ELEMENT_COUNT] {
-        &self.element_present
-    }
-
-    /// Returns whether the element at `class_index` is present in this sample.
-    ///
-    /// # Parameters
-    ///
-    /// - `class_index` - Index into [`ELEMENTS`].
-    #[must_use]
-    pub fn is_element_present(&self, class_index: usize) -> Option<bool> {
-        self.element_present.get(class_index).copied()
-    }
-}
-

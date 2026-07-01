@@ -1,7 +1,7 @@
-//! # `SpectraScribe`
+//! # `ms2atoms`
 //!
-//! `spectra_scribe` trains and evaluates machine-learning models for MS/MS
-//! element identification.
+//! `ms2atoms` trains and evaluates machine-learning models for MS/MS
+//! element-identification experiments.
 //!
 //! The crate currently provides an experimental pipeline for:
 //!
@@ -17,11 +17,11 @@
 
 #![recursion_limit = "256"]
 
-/// Embedded or static data used by `spectra_scribe` experiments.
-pub mod data;
 /// Dataset loading, preprocessing, and sample representation.
 pub mod dataset;
-/// Error types used throughout the `spectra_scribe` pipeline.
+/// Domain-specific types for spectra and element targets.
+pub mod domain;
+/// Error types used throughout the `ms2atoms` pipeline.
 pub mod error;
 /// Evaluation utilities for confusion matrices, metrics, and reports.
 pub mod evaluation;
@@ -33,4 +33,3 @@ pub mod experiments;
 pub mod holdout;
 /// Model architecture and model configuration.
 pub mod models;
-

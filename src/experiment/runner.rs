@@ -5,23 +5,23 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use burn::backend::{Autodiff, Wgpu};
 use csv::Writer;
 use serde::Serialize;
 use tracing::info;
 
 use crate::{
-    dataset::SpectraData, error::SpectraError, evaluation::{
-        aggregate_metrics, confusion::ConfusionMatrix, create_confusion_matrices,
+    dataset::SpectraData,
+    domain::sample::SpectrumSample,
+    error::Ms2AtomsError,
+    evaluation::{
+        PredictionMatrix, aggregate_metrics, confusion::ConfusionMatrix, create_confusion_matrices,
         element_metrics_from_matrices, metrics::AggregateMetrics,
-    }, experiment::{
-        config::{ClassWeighting, ExperimentConfig},
-        protocol::ExperimentProtocol,
-    }, holdout::{Holdout, class_distribution_report}, models::{burn::{inference, training::{TrainingConfig, train_holdout}}, mlp::MLPConfig},
+    },
+    experiment::{ExperimentConfig, ExperimentProtocol},
+    holdout::{Holdout, class_distribution_report},
+    models::{self, spec::ModelSpec},
 };
 
-type MyBackend = Wgpu<f32, i32>;
-type MyAutodiffBackend = Autodiff<MyBackend>;
 type ExperimentConfusions = BTreeMap<String, Vec<ConfusionMatrix>>;
 
 /// Runs one configured experiment, trains every holdout, and writes artifact and CSV reports.
@@ -30,13 +30,8 @@ type ExperimentConfusions = BTreeMap<String, Vec<ConfusionMatrix>>;
 /// - `config` - Experiment configuration to execute.
 ///
 /// # Errors
-/// - Returns [`SpectraError`] if spectra loading fails.
-/// - Returns [`SpectraError`] if output directory setup fails.
-/// - Returns [`SpectraError`] if training a holdout fails.
-/// - Returns [`SpectraError`] if inference fails.
-/// - Returns [`SpectraError`] if report generation fails.
-/// - Returns [`SpectraError`] if CSV writing fails.
-pub fn run_experiment<P>(config: &ExperimentConfig<P>) -> Result<(), SpectraError>
+/// Returns [`Ms2AtomsError`] if loading, training, inference, or report generation fails.
+pub fn run_experiment<P>(config: &ExperimentConfig<P>) -> Result<(), Ms2AtomsError>
 where
     P: ExperimentProtocol,
 {
@@ -48,8 +43,6 @@ where
     info!("Spectra loaded.");
 
     let holdouts = config.protocol.generate_holdouts(&dataset);
-    let device = burn::backend::wgpu::WgpuDevice::default();
-
     let mut holdout_aggregate_rows = Vec::new();
     let mut experiment_confusions_by_threshold = ExperimentConfusions::new();
 
@@ -59,7 +52,6 @@ where
             &experiment_name,
             &paths,
             &holdout,
-            &device,
             &mut holdout_aggregate_rows,
             &mut experiment_confusions_by_threshold,
         )?;
@@ -87,7 +79,7 @@ struct ExperimentPaths {
     summary_results: PathBuf,
 }
 
-fn prepare_experiment_dirs(experiment_name: &str) -> Result<ExperimentPaths, SpectraError> {
+fn prepare_experiment_dirs(experiment_name: &str) -> Result<ExperimentPaths, Ms2AtomsError> {
     let artifact_root = PathBuf::from("./experiments").join(experiment_name);
     let results_root = PathBuf::from("./results").join(experiment_name);
     let holdout_results_root = results_root.join("holdouts");
@@ -109,10 +101,9 @@ fn run_holdout<P>(
     experiment_name: &str,
     paths: &ExperimentPaths,
     holdout: &P::HoldoutType,
-    device: &burn::backend::wgpu::WgpuDevice,
     holdout_aggregate_rows: &mut Vec<HoldoutAggregateMetricsRow>,
     experiment_confusions_by_threshold: &mut ExperimentConfusions,
-) -> Result<(), SpectraError>
+) -> Result<(), Ms2AtomsError>
 where
     P: ExperimentProtocol,
 {
@@ -122,7 +113,6 @@ where
     let holdout_label = format_holdout(holdout_number);
     let holdout_results_dir = paths.holdout_results.join(&holdout_label);
     let artifact_dir = paths.artifact.join(&holdout_label);
-    let artifact_dir_string = path_to_string(&artifact_dir);
 
     fs::create_dir_all(&holdout_results_dir)?;
 
@@ -139,21 +129,8 @@ where
         &distribution,
     )?;
 
-    let training_config = training_config_for_holdout(config, holdout)?;
-
-    train_holdout::<MyAutodiffBackend, _>(
-        &artifact_dir_string,
-        holdout,
-        &training_config,
-        &device.clone(),
-    )?;
-
     let validation_items = holdout.validation_dataset().samples().to_vec();
-    let predictions = inference::infer::<MyBackend>(
-        &artifact_dir_string,
-        device,
-        validation_items.clone(),
-    )?;
+    let predictions = train_and_predict_holdout(&config.model, holdout, &artifact_dir)?;
 
     for threshold in &config.evaluation.thresholds {
         evaluate_threshold(
@@ -164,7 +141,7 @@ where
                 validation_items: &validation_items,
                 threshold: *threshold,
             },
-            predictions.clone(),
+            &predictions,
             holdout_aggregate_rows,
             experiment_confusions_by_threshold,
         )?;
@@ -173,55 +150,20 @@ where
     Ok(())
 }
 
-fn training_config_for_holdout<H>(
-    config: &ExperimentConfig<impl ExperimentProtocol>,
-    holdout: &H,
-) -> Result<TrainingConfig, SpectraError>
-where
-    H: Holdout,
-{
-    let class_weights = match config.loss.class_weighting {
-        ClassWeighting::None => None,
-        ClassWeighting::InverseFrequency { clamp } => Some(
-            holdout
-                .train_dataset()
-                .class_weights_for(holdout.class_indices(), clamp)?,
-        ),
-    };
-
-    let model_config = MLPConfig::new(
-        holdout.num_classes(),
-        config.model.hidden_size,
-        config.features.bin_size,
-        config.model.dropout,
-    )
-    .with_class_weights(class_weights);
-
-    Ok(TrainingConfig::new_with_values(
-        model_config,
-        config.training.epochs,
-        config.training.batch_size,
-        config.training.workers,
-        holdout.random_seed(),
-        config.training.learning_rate,
-        holdout.class_indices().to_vec(),
-    ))
-}
-
 struct ThresholdEvaluation<'a, H: Holdout> {
     experiment_name: &'a str,
     holdout_results_dir: &'a Path,
     holdout: &'a H,
-    validation_items: &'a [crate::data::SpectrumSample],
+    validation_items: &'a [SpectrumSample],
     threshold: f64,
 }
 
 fn evaluate_threshold<H>(
     evaluation: &ThresholdEvaluation<'_, H>,
-    predictions: burn::prelude::Tensor<MyBackend, 2>,
+    predictions: &PredictionMatrix,
     holdout_aggregate_rows: &mut Vec<HoldoutAggregateMetricsRow>,
     experiment_confusions_by_threshold: &mut ExperimentConfusions,
-) -> Result<(), SpectraError>
+) -> Result<(), Ms2AtomsError>
 where
     H: Holdout,
 {
@@ -235,7 +177,6 @@ where
     let confusion_matrices = create_confusion_matrices(
         predictions,
         evaluation.validation_items,
-        evaluation.holdout.class_indices(),
         evaluation.threshold,
     )?;
 
@@ -277,11 +218,29 @@ where
     Ok(())
 }
 
+fn train_and_predict_holdout<H>(
+    model: &ModelSpec,
+    holdout: &H,
+    artifact_dir: &Path,
+) -> Result<PredictionMatrix, Ms2AtomsError>
+where
+    H: Holdout,
+{
+    match model {
+        ModelSpec::BurnMlp(config) => {
+            models::burn::training::train_and_predict(config, holdout, artifact_dir)
+        }
+        ModelSpec::LinfaLogistic(config) => {
+            models::linfa::logistic::train_and_predict(config, holdout, artifact_dir)
+        }
+    }
+}
+
 fn write_experiment_summary(
     experiment_name: &str,
     summary_results_root: &Path,
     experiment_confusions_by_threshold: ExperimentConfusions,
-) -> Result<(), SpectraError> {
+) -> Result<(), Ms2AtomsError> {
     let mut experiment_aggregate_rows = Vec::new();
 
     for (threshold_label, confusion_matrices) in experiment_confusions_by_threshold {
@@ -429,7 +388,7 @@ fn merge_confusion_matrices(destination: &mut Vec<ConfusionMatrix>, source: &[Co
 }
 
 /// Writes a slice of serializable rows to a CSV file.
-fn write_csv<T: Serialize>(path: PathBuf, rows: &[T]) -> Result<(), SpectraError> {
+fn write_csv<T: Serialize>(path: PathBuf, rows: &[T]) -> Result<(), Ms2AtomsError> {
     let file = File::create(path)?;
     let mut writer = Writer::from_writer(file);
 
@@ -455,11 +414,6 @@ fn format_holdout(holdout_number: usize) -> String {
 /// Formats floating-point thresholds into filesystem-safe names.
 fn format_threshold(threshold: f64) -> String {
     format!("{threshold:.2}").replace('.', "_")
-}
-
-/// Converts a path to the string format required by the current training/inference APIs.
-fn path_to_string(path: &Path) -> String {
-    path.to_string_lossy().into_owned()
 }
 
 /// Converts arbitrary experiment names into lowercase filesystem-safe slugs.
