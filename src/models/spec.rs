@@ -8,3 +8,12 @@ pub enum ModelSpec {
     /// Linfa one-vs-rest logistic-regression baseline.
     LinfaLogistic(LinfaLogisticConfig),
 }
+
+impl ModelSpec {
+    pub(crate) const fn name(&self) -> &'static str {
+        match self {
+            Self::BurnMlp(_) => "Burn MLP",
+            Self::LinfaLogistic(_) => "Linfa logistic",
+        }
+    }
+}

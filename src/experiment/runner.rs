@@ -17,7 +17,7 @@ use crate::{
         PredictionMatrix, aggregate_metrics, confusion::ConfusionMatrix, create_confusion_matrices,
         element_metrics_from_matrices, metrics::AggregateMetrics,
     },
-    experiment::{ExperimentConfig, ExperimentProtocol},
+    experiment::{ExperimentConfig, ExperimentProtocol, progress::TerminalReporter},
     holdout::{Holdout, class_distribution_report},
     models::{self, spec::ModelSpec},
 };
@@ -130,7 +130,12 @@ where
     )?;
 
     let validation_items = holdout.validation_dataset().samples().to_vec();
-    let predictions = train_and_predict_holdout(&config.model, holdout, &artifact_dir)?;
+    let mut progress = TerminalReporter::new(format!(
+        "{experiment_name} {holdout_label} {}",
+        config.model.name()
+    ));
+    let predictions =
+        train_and_predict_holdout(&config.model, holdout, &artifact_dir, &mut progress)?;
 
     for threshold in &config.evaluation.thresholds {
         evaluate_threshold(
@@ -222,16 +227,18 @@ fn train_and_predict_holdout<H>(
     model: &ModelSpec,
     holdout: &H,
     artifact_dir: &Path,
+    progress: &mut dyn crate::experiment::progress::Reporter,
 ) -> Result<PredictionMatrix, Ms2AtomsError>
 where
     H: Holdout,
 {
     match model {
         ModelSpec::BurnMlp(config) => {
+            progress.finish("starting Burn MLP; Burn owns the training progress UI")?;
             models::burn::training::train_and_predict(config, holdout, artifact_dir)
         }
         ModelSpec::LinfaLogistic(config) => {
-            models::linfa::logistic::train_and_predict(config, holdout, artifact_dir)
+            models::linfa::logistic::train_and_predict(config, holdout, artifact_dir, progress)
         }
     }
 }

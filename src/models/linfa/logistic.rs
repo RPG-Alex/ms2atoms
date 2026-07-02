@@ -6,6 +6,7 @@ use std::{fs, path::Path};
 use crate::{
     error::Ms2AtomsError,
     evaluation::prediction::PredictionMatrix,
+    experiment::progress::Reporter,
     holdout::Holdout,
     models::linfa::{
         config::LinfaLogisticConfig,
@@ -46,24 +47,31 @@ pub enum AtomLogisticClassifier {
 ///
 /// # Errors
 /// Returns [`Ms2AtomsError`] if feature construction, model fitting, or artifact writing fails.
-pub fn train_and_predict<H>(
+pub(crate) fn train_and_predict<H>(
     config: &LinfaLogisticConfig,
     holdout: &H,
     artifact_dir: &Path,
+    progress: &mut dyn Reporter,
 ) -> Result<PredictionMatrix, Ms2AtomsError>
 where
     H: Holdout,
 {
     fs::create_dir_all(artifact_dir)?;
 
+    progress.report("preparing Linfa one-vs-rest logistic regression")?;
+
     let model = train(
         config,
         holdout.train_dataset().samples(),
         holdout.class_indices(),
+        progress,
     )?;
     write_training_summary(&model, artifact_dir)?;
 
-    predict(&model, holdout.validation_dataset().samples())
+    let predictions = predict(&model, holdout.validation_dataset().samples(), progress)?;
+    progress.finish("Linfa logistic training and inference complete")?;
+
+    Ok(predictions)
 }
 
 /// Trains one binary classifier for each selected element class.
@@ -71,13 +79,21 @@ fn train(
     config: &LinfaLogisticConfig,
     samples: &[crate::domain::sample::SpectrumSample],
     class_indices: &[usize],
+    progress: &mut dyn Reporter,
 ) -> Result<TrainedLinfaLogisticModel, Ms2AtomsError> {
     let mut classifiers = Vec::with_capacity(class_indices.len());
 
-    for &class_index in class_indices {
+    progress.report_step(0, class_indices.len(), "starting classifier training")?;
+
+    for (position, &class_index) in class_indices.iter().enumerate() {
         let targets = binary_targets(samples, class_index)?;
         let positives = targets.iter().filter(|&&target| target == 1).count();
         let negatives = targets.len().saturating_sub(positives);
+
+        let step_number = position + 1;
+        let class_summary =
+            format!("class_index={class_index}, positives={positives}, negatives={negatives}");
+        progress.report_step(step_number, class_indices.len(), &class_summary)?;
 
         let classifier = match (positives, negatives) {
             (0, _) => AtomLogisticClassifier::Constant {
@@ -89,6 +105,9 @@ fn train(
                 probability: 1.0,
             },
             _ => {
+                let fit_summary = format!("fitting {class_summary}");
+                progress.report_step(step_number, class_indices.len(), &fit_summary)?;
+
                 let dataset = binary_dataset(samples, class_index)?;
                 let model = LogisticRegression::default()
                     .max_iterations(config.max_iterations)
@@ -100,6 +119,8 @@ fn train(
             }
         };
 
+        let done_summary = format!("finished {class_summary}");
+        progress.report_step(step_number, class_indices.len(), &done_summary)?;
         classifiers.push(classifier);
     }
 
@@ -111,22 +132,42 @@ fn train(
 
 /// Predicts per-class probabilities for validation samples.
 fn predict(
-    model: &TrainedLinfaLogisticModel,
+    trained_model: &TrainedLinfaLogisticModel,
     samples: &[crate::domain::sample::SpectrumSample],
+    progress: &mut dyn Reporter,
 ) -> Result<PredictionMatrix, Ms2AtomsError> {
-    let features = feature_matrix(samples)?;
-    let mut scores = vec![Vec::with_capacity(model.class_indices.len()); samples.len()];
+    progress.report("building validation feature matrix")?;
 
-    for classifier in &model.classifiers {
+    let features = feature_matrix(samples)?;
+    let mut scores = vec![Vec::with_capacity(trained_model.class_indices.len()); samples.len()];
+    let total_classifiers = trained_model.classifiers.len();
+
+    progress.report_step(0, total_classifiers, "starting prediction")?;
+
+    for (position, classifier) in trained_model.classifiers.iter().enumerate() {
+        let step_number = position + 1;
+
         match classifier {
-            AtomLogisticClassifier::Fitted { model, .. } => {
-                let probabilities = model.predict_probabilities(&features);
+            AtomLogisticClassifier::Fitted {
+                class_index,
+                model: fitted_model,
+            } => {
+                let summary = format!("predicting class_index={class_index}");
+                progress.report_step(step_number, total_classifiers, &summary)?;
+
+                let probabilities = fitted_model.predict_probabilities(&features);
 
                 for (row, probability) in scores.iter_mut().zip(probabilities.iter()) {
                     row.push(*probability);
                 }
             }
-            AtomLogisticClassifier::Constant { probability, .. } => {
+            AtomLogisticClassifier::Constant {
+                class_index,
+                probability,
+            } => {
+                let summary = format!("using constant prediction for class_index={class_index}");
+                progress.report_step(step_number, total_classifiers, &summary)?;
+
                 for row in &mut scores {
                     row.push(*probability);
                 }
@@ -134,7 +175,7 @@ fn predict(
         }
     }
 
-    PredictionMatrix::new(model.class_indices.clone(), scores)
+    PredictionMatrix::new(trained_model.class_indices.clone(), scores)
 }
 
 /// Writes a lightweight human-readable summary of the logistic baseline artifacts.
@@ -147,7 +188,7 @@ fn write_training_summary(
     for classifier in &model.classifiers {
         match classifier {
             AtomLogisticClassifier::Fitted { class_index, .. } => {
-                let _ = writeln!(summary, "class_index={class_index}: fitted\n");
+                let _ = writeln!(summary, "class_index={class_index}: fitted");
             }
             AtomLogisticClassifier::Constant {
                 class_index,
@@ -155,7 +196,7 @@ fn write_training_summary(
             } => {
                 let _ = writeln!(
                     summary,
-                    "class_index={class_index}: constant_probability={probability}\n"
+                    "class_index={class_index}: constant_probability={probability}"
                 );
             }
         }
