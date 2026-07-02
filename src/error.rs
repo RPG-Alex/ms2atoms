@@ -37,24 +37,48 @@ pub enum Ms2AtomsError {
     ModelInference(String),
     /// Error returned while saving or loading model artifacts.
     ModelArtifact(String),
+    /// Error returned for invalid command-line arguments.
+    CommandLine(String),
+    /// Error returned when no experiment is registered for the requested number.
+    UnknownExperimentNumber {
+        /// Requested experiment number.
+        number: usize,
+    },
+    /// Error returned while doing checked arithmetic operation
+    Arithmetic(String),
 }
 
 impl Ms2AtomsError {
     /// Creates a model-training error from a displayable message.
-    #[allow(clippy::needless_pass_by_value)]
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "Taking ownership keeps this usable as a Result::map_err function."
+    )]
     pub fn model_training(error: impl ToString) -> Self {
         Self::ModelTraining(error.to_string())
     }
+
     /// Creates a model-inference error from a displayable message.
-    #[allow(clippy::needless_pass_by_value)]
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "Taking ownership keeps this usable as a Result::map_err function."
+    )]
     pub fn model_inference(error: impl ToString) -> Self {
         Self::ModelInference(error.to_string())
     }
 
     /// Creates a model-artifact error from a displayable message.
-    #[allow(clippy::needless_pass_by_value)]
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "Taking ownership keeps this usable as a Result::map_err function."
+    )]
     pub fn model_artifact(error: impl ToString) -> Self {
         Self::ModelArtifact(error.to_string())
+    }
+
+    /// Creates a command-line argument error.
+    pub fn command_line(message: impl Into<String>) -> Self {
+        Self::CommandLine(message.into())
     }
 }
 
@@ -103,6 +127,16 @@ impl core::fmt::Display for Ms2AtomsError {
             Self::ModelTraining(error) => write!(f, "model training error: {error}"),
             Self::ModelInference(error) => write!(f, "model inference error: {error}"),
             Self::ModelArtifact(error) => write!(f, "model artifact error: {error}"),
+            Self::CommandLine(error) => write!(f, "command-line error: {error}"),
+            Self::UnknownExperimentNumber { number } => {
+                write!(f, "unknown experiment number: {number}")
+            }
+            Self::Arithmetic(equation) => {
+                write!(
+                    f,
+                    "Failed to complete checked arithmetic operation: {equation}"
+                )
+            }
         }
     }
 }
