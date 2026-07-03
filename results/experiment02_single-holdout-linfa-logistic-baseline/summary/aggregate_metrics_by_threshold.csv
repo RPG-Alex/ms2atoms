@@ -1,0 +1,2 @@
+experiment,threshold_label,macro_precision,macro_recall,macro_f1,macro_mcc,micro_precision,micro_recall,micro_f1,micro_mcc
+experiment02_single-holdout-linfa-logistic-baseline,0_50,0.05263464222041838,0.14736842105263157,0.0526377051951089,-0.005517615046335303,0.20360259129736857,0.25370908010241405,0.22591081476844943,-0.005617408933565583

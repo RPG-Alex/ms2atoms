@@ -12,7 +12,7 @@ pub type BinaryDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 /// Builds a feature matrix with shape `[n_samples, n_features]`.
 ///
 /// # Errors
-/// Returns [`Ms2AtomsError`] if the samples are empty or have inconsistent feature widths.
+/// - Returns [`Ms2AtomsError`] if the samples are empty or have inconsistent feature widths.
 pub fn feature_matrix(samples: &[SpectrumSample]) -> Result<Array2<f64>, Ms2AtomsError> {
     let Some(first_sample) = samples.first() else {
         return Err(Ms2AtomsError::EmptyDataset {
@@ -46,7 +46,7 @@ pub fn feature_matrix(samples: &[SpectrumSample]) -> Result<Array2<f64>, Ms2Atom
 /// Builds binary targets for one element class.
 ///
 /// # Errors
-/// Returns [`Ms2AtomsError`] if the class index is invalid.
+/// - Returns [`Ms2AtomsError`] if the class index is invalid.
 pub fn binary_targets(
     samples: &[SpectrumSample],
     class_index: usize,
@@ -80,4 +80,58 @@ pub fn binary_dataset(
         feature_matrix(samples)?,
         binary_targets(samples, class_index)?,
     ))
+}
+
+/// Builds a Linfa binary dataset from selected sample indices.
+///
+/// # Errors
+/// -Returns [`Ms2AtomsError`] if a selected index is invalid
+pub fn binary_dataset_from_indices(
+    samples: &[SpectrumSample],
+    class_index: usize,
+    selected_indices: &[usize],
+) -> Result<BinaryDataset, Ms2AtomsError> {
+    if class_index >= ELEMENT_COUNT {
+        return Err(Ms2AtomsError::InvalidClassIndex { class_index });
+    }
+
+    let Some(first_index) = selected_indices.first() else {
+        return Err(Ms2AtomsError::EmptyDataset {
+            context: "Linfa selected binary dataset".to_owned(),
+        });
+    };
+
+    let first_sample = samples.get(*first_index).ok_or(Ms2AtomsError::InvalidArray)?;
+    let n_samples = selected_indices.len();
+    let n_features = first_sample.spectra().len();
+
+    let capacity = n_samples
+        .checked_mul(n_features)
+        .ok_or(Ms2AtomsError::InvalidArray)?;
+
+    let mut values = Vec::with_capacity(capacity);
+    let mut targets = Vec::with_capacity(n_samples);
+
+    for sample_index in selected_indices {
+        let sample = samples.get(*sample_index).ok_or(Ms2AtomsError::InvalidArray)?;
+
+        if sample.spectra().len() != n_features {
+            return Err(Ms2AtomsError::InconsistentFeatureLength {
+                expected: n_features,
+                actual: sample.spectra().len(),
+            });
+        }
+
+        values.extend(sample.spectra().iter().copied());
+        targets.push(usize::from(
+            sample
+                .is_element_present(class_index)
+                .ok_or(Ms2AtomsError::InvalidClassIndex { class_index })?,
+        ));
+    }
+
+    let features = Array2::from_shape_vec((n_samples, n_features), values)
+        .map_err(|_| Ms2AtomsError::InvalidArray)?;
+
+    Ok(DatasetBase::new(features, Array1::from(targets)))
 }

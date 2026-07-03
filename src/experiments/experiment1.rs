@@ -19,7 +19,7 @@ use crate::{
 /// inverse-frequency class weighting, and fixed evaluation thresholds.
 ///
 /// # Errors
-/// Returns [`Ms2AtomsError`] if experiment execution fails.
+/// - Returns [`Ms2AtomsError`] if experiment execution fails.
 pub fn run() -> Result<(), Ms2AtomsError> {
     let config = ExperimentConfig {
         run: RunConfig {
