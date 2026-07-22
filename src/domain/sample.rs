@@ -3,6 +3,8 @@ use crate::domain::elements::ELEMENT_COUNT;
 #[derive(Clone, Debug)]
 /// One preprocessed MS/MS spectrum sample and its element-presence labels.
 pub struct SpectrumSample {
+    /// molecular group identifier
+    group_id: String,
     spectra: Vec<f64>,
     element_present: [bool; ELEMENT_COUNT],
 }
@@ -14,11 +16,22 @@ impl SpectrumSample {
     /// - `spectra` - Binned spectrum intensity values.
     /// - `element_present` - Fixed-width element-presence labels aligned with the element list.
     #[must_use]
-    pub const fn new(spectra: Vec<f64>, element_present: [bool; ELEMENT_COUNT]) -> Self {
+    pub const fn new(
+        group_id: String,
+        spectra: Vec<f64>,
+        element_present: [bool; ELEMENT_COUNT],
+    ) -> Self {
         Self {
+            group_id,
             spectra,
             element_present,
         }
+    }
+
+    /// Returns the Sample's `group_id`
+    #[must_use]
+    pub fn group_id(&self) -> &str {
+        &self.group_id
     }
 
     /// Returns the binned spectrum intensity values.

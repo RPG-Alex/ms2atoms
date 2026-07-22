@@ -18,21 +18,34 @@ pub fn load_spectra(bin_size: usize) -> Result<Vec<SpectrumSample>, Ms2AtomsErro
     )?;
 
     let mut output = Vec::with_capacity(load.spectra().len());
+    // keep track of any spectra with missing smiles
+    let mut missing_smiles = 0usize;
 
     for spec in load.spectra() {
         let Some(formula) = spec.metadata().formula() else {
             continue;
         };
-
+        let Some(smiles) = spec.metadata().smiles() else {
+            missing_smiles += 1;
+            continue;
+        };
+        let group_id = smiles.to_string();
         let spectra = spec
             .linear_binned_intensities(0.0, 1000.0, bin_size)?
             .clone();
 
         output.push(SpectrumSample::new(
+            group_id,
             spectra,
             formula_element_occurrence(formula),
         ));
     }
+
+    tracing::info!(
+        loaded_samples = output.len(),
+        missing_smiles,
+        "Loaded annotated spectra"
+    );
 
     Ok(output)
 }
