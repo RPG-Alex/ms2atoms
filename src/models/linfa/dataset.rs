@@ -101,7 +101,9 @@ pub fn binary_dataset_from_indices(
         });
     };
 
-    let first_sample = samples.get(*first_index).ok_or(Ms2AtomsError::InvalidArray)?;
+    let first_sample = samples
+        .get(*first_index)
+        .ok_or(Ms2AtomsError::InvalidArray)?;
     let n_samples = selected_indices.len();
     let n_features = first_sample.spectra().len();
 
@@ -113,7 +115,9 @@ pub fn binary_dataset_from_indices(
     let mut targets = Vec::with_capacity(n_samples);
 
     for sample_index in selected_indices {
-        let sample = samples.get(*sample_index).ok_or(Ms2AtomsError::InvalidArray)?;
+        let sample = samples
+            .get(*sample_index)
+            .ok_or(Ms2AtomsError::InvalidArray)?;
 
         if sample.spectra().len() != n_features {
             return Err(Ms2AtomsError::InconsistentFeatureLength {

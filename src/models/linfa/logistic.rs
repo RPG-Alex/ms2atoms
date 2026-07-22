@@ -211,11 +211,7 @@ fn selected_training_indices(
     })
 }
 
-fn max_negative_count(
-    positives: usize,
-    negatives: usize,
-    config: &LinfaLogisticConfig,
-) -> usize {
+fn max_negative_count(positives: usize, negatives: usize, config: &LinfaLogisticConfig) -> usize {
     if positives == 0 || negatives == 0 {
         return negatives;
     }
@@ -229,9 +225,8 @@ fn max_negative_count(
 }
 
 fn class_seed(base_seed: u64, class_index: usize) -> Result<u64, Ms2AtomsError> {
-    let class_index = u64::try_from(class_index).map_err(|_| Ms2AtomsError::InvalidClassIndex {
-        class_index,
-    })?;
+    let class_index =
+        u64::try_from(class_index).map_err(|_| Ms2AtomsError::InvalidClassIndex { class_index })?;
 
     Ok(base_seed ^ class_index.wrapping_mul(0x9E37_79B9_7F4A_7C15))
 }
