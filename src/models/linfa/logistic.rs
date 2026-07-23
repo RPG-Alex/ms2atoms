@@ -268,7 +268,7 @@ fn predict(
                 let probabilities = fitted_model.predict_probabilities(&features);
 
                 for (row, probability) in scores.iter_mut().zip(probabilities.iter()) {
-                    row.push(*probability);
+                    row.push(element_presence_probability(fitted_model, *probability)?);
                 }
             }
             AtomLogisticClassifier::Constant {
@@ -298,7 +298,6 @@ fn write_training_summary(
     artifact_dir: &Path,
 ) -> Result<(), Ms2AtomsError> {
     let mut summary = String::from("Linfa one-vs-rest logistic regression\n");
-
     for classifier in &model.classifiers {
         match classifier {
             AtomLogisticClassifier::Fitted {
@@ -339,4 +338,83 @@ fn write_training_summary(
 
     fs::write(artifact_dir.join("model_summary.txt"), summary)?;
     Ok(())
+}
+
+/// Helper to refine probability of element present
+fn element_presence_probability(
+    model: &FittedLogisticRegression<f64, usize>,
+    probability: f64,
+) -> Result<f64, Ms2AtomsError> {
+    let labels = model.labels();
+
+    match (labels.pos.class, labels.neg.class) {
+        // Label is already correct, the element is present
+        (1,0) => Ok(probability),
+        // Label shows the element is absent
+        (0,1) => Ok(1.0 - probability),
+        // anything else isn't binary and should be an error
+        (positive_label, negative_label) => Err(Ms2AtomsError::ModelInference(
+            format!("expected binary labels of `0` and `1`, found labels: positive {positive_label} and negative: {negative_label}")
+        ))
+
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use linfa::{Dataset, traits::Fit};
+use ndarray::array;
+
+    use super::*;
+
+    fn fitted_test_model(
+        targets: [usize; 4],
+    ) -> Result<FittedLogisticRegression<f64, usize>, Ms2AtomsError> {
+        let features = array![
+            [0.0],
+            [0.5],
+            [1.0],
+            [1.5],
+        ];
+
+        let dataset = Dataset::new(features, ndarray::Array::from_iter(targets));
+
+        LogisticRegression::default()
+            .max_iterations(100)
+            .alpha(1.0)
+            .fit(&dataset)
+            .map_err(Ms2AtomsError::model_training)
+    }
+
+    #[test]
+    fn preserves_probability_when_present_is_positive(
+    ) -> Result<(), Ms2AtomsError> {
+        let model = fitted_test_model([0,1,1,1])?;
+
+        assert_eq!(model.labels().pos.class, 1);
+        assert_eq!(model.labels().neg.class, 0);
+
+        let input_probability = 0.8;
+        let probability =
+            element_presence_probability(&model, input_probability)?;
+
+        assert_eq!(probability, input_probability);
+
+        Ok(())
+    }
+
+    #[test]
+fn inverts_probability_when_absent_is_positive(
+) -> Result<(), Ms2AtomsError> {
+    let model = fitted_test_model([0, 0, 0, 1])?;
+
+    assert_eq!(model.labels().pos.class, 0);
+    assert_eq!(model.labels().neg.class, 1);
+
+    let probability = element_presence_probability(&model, 0.8)?;
+
+    assert!((probability - 0.2).abs() < f64::EPSILON);
+
+    Ok(())
+}
 }
