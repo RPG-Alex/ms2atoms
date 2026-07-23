@@ -31,8 +31,8 @@ pub fn run() -> Result<(), Ms2AtomsError> {
             max_iterations: 100,
             alpha: 1.0,
             random_seed: 42,
-            max_negative_to_positive_ratio: Some(50),
-            max_negative_samples: Some(50_000),
+            max_majority_to_minority_ratio: Some(50),
+            max_samples_per_class: Some(50_000),
         }),
         evaluation: EvaluationConfig {
             thresholds: vec![0.5],

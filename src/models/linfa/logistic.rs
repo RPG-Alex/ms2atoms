@@ -1,7 +1,7 @@
 use linfa::traits::Fit;
 use linfa_logistic::{FittedLogisticRegression, LogisticRegression};
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
-use std::{fmt::Write, fs, path::Path};
+use std::{fmt::Write, fs, path::Path, usize};
 
 use crate::{
     domain::{elements::ELEMENTS, sample::SpectrumSample},
@@ -16,13 +16,13 @@ use crate::{
 };
 
 /// Trained one-vs-rest Linfa logistic-regression model.
-pub struct TrainedLinfaLogisticModel {
+pub(crate) struct TrainedLinfaLogisticModel {
     classifiers: Vec<AtomLogisticClassifier>,
     class_indices: Vec<usize>,
 }
 
 /// One binary classifier for one target atom.
-pub enum AtomLogisticClassifier {
+pub(crate) enum AtomLogisticClassifier {
     /// A fitted Linfa binary logistic-regression model.
     Fitted {
         /// Element class index handled by this classifier.
@@ -191,37 +191,54 @@ fn selected_training_indices(
 
     let original_positives = positive_indices.len();
     let original_negatives = negative_indices.len();
-    let max_negatives = max_negative_count(original_positives, original_negatives, config);
-    let used_negatives = max_negatives.min(original_negatives);
+
+    let (used_positives, used_negatives) =
+        selected_class_counts(original_positives, original_negatives, config);
 
     let mut rng = ChaCha8Rng::seed_from_u64(class_seed(config.random_seed, class_index)?);
+
+    positive_indices.shuffle(&mut rng);
     negative_indices.shuffle(&mut rng);
 
-    let mut indices = Vec::with_capacity(original_positives.saturating_add(used_negatives));
-    indices.extend(positive_indices);
+    let mut indices = Vec::with_capacity(used_positives.saturating_add(used_negatives));
+
+    indices.extend(positive_indices.into_iter().take(used_positives));
+
     indices.extend(negative_indices.into_iter().take(used_negatives));
+
     indices.shuffle(&mut rng);
 
     Ok(SelectedTrainingIndices {
         indices,
         original_positives,
         original_negatives,
-        used_positives: original_positives,
+        used_positives,
         used_negatives,
     })
 }
 
-fn max_negative_count(positives: usize, negatives: usize, config: &LinfaLogisticConfig) -> usize {
+/// Returns a tuple of positive and negative samples (p,n)
+fn selected_class_counts(
+    positives: usize,
+    negatives: usize,
+    config: &LinfaLogisticConfig,
+) -> (usize, usize) {
     if positives == 0 || negatives == 0 {
-        return negatives;
+        return (positives, negatives);
     }
+    let sample_cap = config.max_samples_per_class.unwrap_or(usize::MAX);
 
-    let ratio_limit = config
-        .max_negative_to_positive_ratio
-        .map_or(negatives, |ratio| positives.saturating_mul(ratio));
-    let cap_limit = config.max_negative_samples.unwrap_or(negatives);
+    let mut used_positives = positives.min(sample_cap);
+    let mut used_negatives = negatives.min(sample_cap);
 
-    ratio_limit.min(cap_limit).max(1).min(negatives)
+    if let Some(ratio) = config.max_majority_to_minority_ratio {
+        if used_positives > used_negatives {
+            used_positives = used_positives.min(used_negatives.saturating_mul(ratio));
+        } else {
+            used_negatives = used_negatives.min(used_positives.saturating_mul(ratio));
+        }
+    }
+    (used_positives.max(1), used_negatives.max(1))
 }
 
 fn class_seed(base_seed: u64, class_index: usize) -> Result<u64, Ms2AtomsError> {
@@ -266,9 +283,16 @@ fn predict(
                 progress.report_step(step_number, total_classifiers, &summary)?;
 
                 let probabilities = fitted_model.predict_probabilities(&features);
+                let invert_probability = should_invert_probability(fitted_model)?;
 
                 for (row, probability) in scores.iter_mut().zip(probabilities.iter()) {
-                    row.push(element_presence_probability(fitted_model, *probability)?);
+                    let presence_probability = if invert_probability {
+                        1.0 - *probability
+                    } else {
+                        *probability
+                    };
+
+                    row.push(presence_probability);
                 }
             }
             AtomLogisticClassifier::Constant {
@@ -340,42 +364,33 @@ fn write_training_summary(
     Ok(())
 }
 
-/// Helper to refine probability of element present
-fn element_presence_probability(
+/// Returns whether Linfa's probability must be inverted to represent
+fn should_invert_probability(
     model: &FittedLogisticRegression<f64, usize>,
-    probability: f64,
-) -> Result<f64, Ms2AtomsError> {
+) -> Result<bool, Ms2AtomsError> {
     let labels = model.labels();
 
     match (labels.pos.class, labels.neg.class) {
-        // Label is already correct, the element is present
-        (1,0) => Ok(probability),
-        // Label shows the element is absent
-        (0,1) => Ok(1.0 - probability),
-        // anything else isn't binary and should be an error
-        (positive_label, negative_label) => Err(Ms2AtomsError::ModelInference(
-            format!("expected binary labels of `0` and `1`, found labels: positive {positive_label} and negative: {negative_label}")
-        ))
-
+        (1, 0) => Ok(false),
+        (0, 1) => Ok(true),
+        (positive_label, negative_label) => Err(Ms2AtomsError::ModelInference(format!(
+            "expected binary labels `0` and `1`, found positive \
+                 label {positive_label} and negative label {negative_label}"
+        ))),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use linfa::{Dataset, traits::Fit};
-use ndarray::array;
+    use ndarray::array;
 
     use super::*;
 
     fn fitted_test_model(
         targets: [usize; 4],
     ) -> Result<FittedLogisticRegression<f64, usize>, Ms2AtomsError> {
-        let features = array![
-            [0.0],
-            [0.5],
-            [1.0],
-            [1.5],
-        ];
+        let features = array![[0.0], [0.5], [1.0], [1.5],];
 
         let dataset = Dataset::new(features, ndarray::Array::from_iter(targets));
 
@@ -385,36 +400,51 @@ use ndarray::array;
             .fit(&dataset)
             .map_err(Ms2AtomsError::model_training)
     }
-
     #[test]
-    fn preserves_probability_when_present_is_positive(
-    ) -> Result<(), Ms2AtomsError> {
-        let model = fitted_test_model([0,1,1,1])?;
+    fn does_not_invert_when_present_is_positive() -> Result<(), Ms2AtomsError> {
+        let model = fitted_test_model([0, 1, 1, 1])?;
 
-        assert_eq!(model.labels().pos.class, 1);
-        assert_eq!(model.labels().neg.class, 0);
-
-        let input_probability = 0.8;
-        let probability =
-            element_presence_probability(&model, input_probability)?;
-
-        assert_eq!(probability, input_probability);
+        assert!(!should_invert_probability(&model)?);
 
         Ok(())
     }
 
     #[test]
-fn inverts_probability_when_absent_is_positive(
-) -> Result<(), Ms2AtomsError> {
-    let model = fitted_test_model([0, 0, 0, 1])?;
+    fn inverts_when_absent_is_positive() -> Result<(), Ms2AtomsError> {
+        let model = fitted_test_model([0, 0, 0, 1])?;
 
-    assert_eq!(model.labels().pos.class, 0);
-    assert_eq!(model.labels().neg.class, 1);
+        assert!(should_invert_probability(&model)?);
 
-    let probability = element_presence_probability(&model, 0.8)?;
+        Ok(())
+    }
 
-    assert!((probability - 0.2).abs() < f64::EPSILON);
+    #[test]
+    fn caps_positive_majority_for_common_element() {
+        let config = LinfaLogisticConfig {
+            max_iterations: 100,
+            alpha: 1.0,
+            random_seed: 42,
+            max_majority_to_minority_ratio: Some(50),
+            max_samples_per_class: Some(50_000),
+        };
 
-    Ok(())
-}
+        let counts = selected_class_counts(355_195, 5, &config);
+
+        assert_eq!(counts, (250, 5));
+    }
+
+    #[test]
+    fn caps_negative_majority_for_rare_element() {
+        let config = LinfaLogisticConfig {
+            max_iterations: 100,
+            alpha: 1.0,
+            random_seed: 42,
+            max_majority_to_minority_ratio: Some(50),
+            max_samples_per_class: Some(50_000),
+        };
+
+        let counts = selected_class_counts(100, 300_000, &config);
+
+        assert_eq!(counts, (100, 5_000));
+    }
 }
