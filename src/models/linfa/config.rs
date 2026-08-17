@@ -1,4 +1,6 @@
-/// Configuration for the Linfa one-vs-rest logistic-regression baseline.
+//! Module for Linfa model configs
+
+/// Configuration for the Linfa logistic-regression.
 #[derive(Clone, Copy, Debug)]
 pub struct LinfaLogisticConfig {
     /// Maximum optimizer iterations for each binary classifier.

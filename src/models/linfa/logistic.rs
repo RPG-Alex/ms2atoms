@@ -1,7 +1,7 @@
 use linfa::traits::Fit;
 use linfa_logistic::{FittedLogisticRegression, LogisticRegression};
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
-use std::{fmt::Write, fs, path::Path, usize};
+use std::{fmt::Write, fs, path::Path};
 
 use crate::{
     domain::{elements::ELEMENTS, sample::SpectrumSample},

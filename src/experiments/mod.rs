@@ -6,6 +6,8 @@ use crate::error::Ms2AtomsError;
 pub mod experiment1;
 /// Linfa logistic-regression baseline experiment.
 pub mod experiment2;
+/// Linfa log regression experiment with max to min reduced to 5
+pub mod experiment3;
 
 /// Selection logic for selecting experiments to run
 pub mod selection;
@@ -35,6 +37,11 @@ const EXPERIMENTS: &[ExperimentDefinition] = &[
         name: "single_holdout-linfa-logistic-baseline",
         run: experiment2::run,
     },
+    ExperimentDefinition {
+        number: 3 ,
+        name: "single_holdout-linfa-logistic-max-to-min-five",
+        run: experiment2::run,
+    }
 ];
 
 /// Returns all experiments registered for command-line execution.

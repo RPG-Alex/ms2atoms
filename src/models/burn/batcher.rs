@@ -1,3 +1,5 @@
+//! Burn data batching utilities for converting spectrum samples into
+//! tensors for multi-label element classification.
 use burn::{
     Tensor,
     data::dataloader::batcher::Batcher,

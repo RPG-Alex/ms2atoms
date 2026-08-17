@@ -1,3 +1,4 @@
+//! Module for working with the dataset with Linfa models
 use linfa::DatasetBase;
 use ndarray::{Array1, Array2};
 
@@ -6,7 +7,7 @@ use crate::{
     error::Ms2AtomsError,
 };
 
-/// Linfa dataset type used by the binary logistic-regression baseline.
+/// Linfa dataset type used by the binary logistic-regression.
 pub type BinaryDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 
 /// Builds a feature matrix with shape `[n_samples, n_features]`.
