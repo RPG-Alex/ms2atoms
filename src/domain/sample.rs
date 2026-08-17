@@ -1,7 +1,7 @@
 use crate::domain::elements::ELEMENT_COUNT;
 
 #[derive(Clone, Debug)]
-/// One preprocessed MS/MS spectrum sample and its element-presence labels.
+/// One preprocessed MS/MS spectrum sample as a vector of `f64` and its element-presence in reference to the [`ELEMENT_COUNT`].
 pub struct SpectrumSample {
     spectra: Vec<f64>,
     element_present: [bool; ELEMENT_COUNT],
