@@ -31,7 +31,7 @@ pub fn run() -> Result<(), Ms2AtomsError> {
             gradient_tolerance: 1e-4,
             alpha: 1.0,
             random_seed: 42,
-            max_majority_to_minority_ratio: Some(50),
+            max_majority_to_minority_ratio: Some(5),
             max_samples_per_class: Some(50_000),
         }),
         evaluation: EvaluationConfig {

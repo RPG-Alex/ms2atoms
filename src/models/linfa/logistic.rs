@@ -471,15 +471,137 @@ mod tests {
         assert_eq!(counts, (100, 5_000));
     }
 
-    #[test]
-    fn constant_positive_class_selects_zero_fitting_indices() {}
+    use crate::domain::elements::ELEMENT_COUNT;
+
+    fn test_config() -> LinfaLogisticConfig {
+        LinfaLogisticConfig {
+            max_iterations: 100,
+            gradient_tolerance: 1e-4,
+            alpha: 1.0,
+            random_seed: 42,
+            max_majority_to_minority_ratio: Some(5),
+            max_samples_per_class: Some(50_000),
+        }
+    }
+
+    fn samples_for_class(
+        class_index: usize,
+        positives: usize,
+        negatives: usize,
+    ) -> Result<Vec<SpectrumSample>, Ms2AtomsError> {
+        let mut samples = Vec::with_capacity(positives.saturating_add(negatives));
+
+        for _ in 0..positives {
+            let mut elements = [false; ELEMENT_COUNT];
+
+            let Some(element) = elements.get_mut(class_index) else {
+                return Err(Ms2AtomsError::InvalidClassIndex { class_index });
+            };
+
+            *element = true;
+
+            samples.push(SpectrumSample::new(
+                "positive".to_owned(),
+                vec![0.0],
+                elements,
+            ));
+        }
+
+        for _ in 0..negatives {
+            samples.push(SpectrumSample::new(
+                "negative".to_owned(),
+                vec![0.0],
+                [false; ELEMENT_COUNT],
+            ));
+        }
+
+        Ok(samples)
+    }
 
     #[test]
-    fn constant_negative_class_selects_zero_fitting_indices() {}
+    fn constant_positive_class_selects_zero_fitting_indices() -> Result<(), Ms2AtomsError> {
+        let class_index = 0;
+        let samples = samples_for_class(class_index, 10, 0)?;
+
+        let selection = selected_training_indices(&samples, class_index, &test_config())?;
+
+        assert!(selection.indices.is_empty());
+        assert_eq!(selection.original_positives, 10);
+        assert_eq!(selection.original_negatives, 0);
+        assert_eq!(selection.used_positives, 10);
+        assert_eq!(selection.used_negatives, 0);
+
+        Ok(())
+    }
 
     #[test]
-    fn selection_is_deterministic_for_same_seed() {}
+    fn constant_negative_class_selects_zero_fitting_indices() -> Result<(), Ms2AtomsError> {
+        let class_index = 0;
+        let samples = samples_for_class(class_index, 0, 10)?;
+
+        let selection = selected_training_indices(&samples, class_index, &test_config())?;
+
+        assert!(selection.indices.is_empty());
+        assert_eq!(selection.original_positives, 0);
+        assert_eq!(selection.original_negatives, 10);
+        assert_eq!(selection.used_positives, 0);
+        assert_eq!(selection.used_negatives, 10);
+
+        Ok(())
+    }
 
     #[test]
-    fn selected_indices_contain_exact_pos_neg_counts() {}
+    fn selection_is_deterministic_for_same_seed() -> Result<(), Ms2AtomsError> {
+        let class_index = 0;
+        let samples = samples_for_class(class_index, 20, 100)?;
+
+        let config = LinfaLogisticConfig {
+            max_majority_to_minority_ratio: Some(2),
+            max_samples_per_class: Some(10),
+            ..test_config()
+        };
+
+        let first = selected_training_indices(&samples, class_index, &config)?;
+
+        let second = selected_training_indices(&samples, class_index, &config)?;
+
+        assert_eq!(first.indices, second.indices);
+
+        Ok(())
+    }
+
+    #[test]
+    fn selected_indices_contain_exact_pos_neg_counts() -> Result<(), Ms2AtomsError> {
+        let class_index = 0;
+        let samples = samples_for_class(class_index, 4, 20)?;
+
+        let config = LinfaLogisticConfig {
+            max_majority_to_minority_ratio: Some(2),
+            max_samples_per_class: None,
+            ..test_config()
+        };
+
+        let selection = selected_training_indices(&samples, class_index, &config)?;
+
+        let mut positives = 0;
+        let mut negatives = 0;
+
+        for sample_index in &selection.indices {
+            let sample = samples
+                .get(*sample_index)
+                .ok_or(Ms2AtomsError::InvalidArray)?;
+
+            match sample.is_element_present(class_index) {
+                Some(true) => positives += 1,
+                Some(false) => negatives += 1,
+                None => return Err(Ms2AtomsError::InvalidClassIndex { class_index }),
+            }
+        }
+
+        assert_eq!(positives, 4);
+        assert_eq!(negatives, 8);
+        assert_eq!(selection.indices.len(), 12);
+
+        Ok(())
+    }
 }
