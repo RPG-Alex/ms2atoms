@@ -40,7 +40,7 @@ const EXPERIMENTS: &[ExperimentDefinition] = &[
     ExperimentDefinition {
         number: 3 ,
         name: "single_holdout-linfa-logistic-max-to-min-five",
-        run: experiment2::run,
+        run: experiment3::run,
     }
 ];
 
