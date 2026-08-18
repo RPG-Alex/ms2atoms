@@ -393,11 +393,7 @@ fn should_invert_probability(
     }
 }
 
-fn select_indices(
-    indices: &[usize],
-    amount: usize,
-    rng: &mut ChaCha8Rng,
-) -> Vec<usize> {
+fn select_indices(indices: &[usize], amount: usize, rng: &mut ChaCha8Rng) -> Vec<usize> {
     if amount >= indices.len() {
         indices.to_vec()
     } else {
@@ -476,22 +472,14 @@ mod tests {
     }
 
     #[test]
-    fn constant_positive_class_selects_zero_fitting_indices() {
-
-    }
+    fn constant_positive_class_selects_zero_fitting_indices() {}
 
     #[test]
-    fn constant_negative_class_selects_zero_fitting_indices() {
-
-    }
+    fn constant_negative_class_selects_zero_fitting_indices() {}
 
     #[test]
-    fn selection_is_deterministic_for_same_seed() {
-
-    }
+    fn selection_is_deterministic_for_same_seed() {}
 
     #[test]
-    fn selected_indices_contain_exact_pos_neg_counts() {
-        
-    }
+    fn selected_indices_contain_exact_pos_neg_counts() {}
 }
