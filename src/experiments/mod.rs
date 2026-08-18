@@ -38,10 +38,10 @@ const EXPERIMENTS: &[ExperimentDefinition] = &[
         run: experiment2::run,
     },
     ExperimentDefinition {
-        number: 3 ,
+        number: 3,
         name: "single_holdout-linfa-logistic-max-to-min-five",
         run: experiment3::run,
-    }
+    },
 ];
 
 /// Returns all experiments registered for command-line execution.

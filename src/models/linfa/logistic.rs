@@ -17,12 +17,19 @@ use crate::{
 
 /// Trained one-vs-rest Linfa logistic-regression model.
 pub(crate) struct TrainedLinfaLogisticModel {
-    classifiers: Vec<AtomLogisticClassifier>,
-    class_indices: Vec<usize>,
+    classifiers: Vec<ElementLogisticClassifier>,
 }
 
-/// One binary classifier for one target atom.
-pub(crate) enum AtomLogisticClassifier {
+impl ElementLogisticClassifier {
+    const fn class_index(&self) -> usize {
+        match self {
+            Self::Fitted { class_index, .. } | Self::Constant { class_index, .. } => *class_index,
+        }
+    }
+}
+
+/// One binary classifier for one target element.
+pub(crate) enum ElementLogisticClassifier {
     /// A fitted Linfa binary logistic-regression model.
     Fitted {
         /// Element class index handled by this classifier.
@@ -119,13 +126,13 @@ fn train(
         progress.report_step(step_number, class_indices.len(), &class_summary)?;
 
         let classifier = match (selection.original_positives, selection.original_negatives) {
-            (0, _) => AtomLogisticClassifier::Constant {
+            (0, _) => ElementLogisticClassifier::Constant {
                 class_index,
                 probability: 0.0,
                 original_positives: selection.original_positives,
                 original_negatives: selection.original_negatives,
             },
-            (_, 0) => AtomLogisticClassifier::Constant {
+            (_, 0) => ElementLogisticClassifier::Constant {
                 class_index,
                 probability: 1.0,
                 original_positives: selection.original_positives,
@@ -145,11 +152,12 @@ fn train(
                     binary_dataset_from_indices(samples, class_index, &selection.indices)?;
                 let model = LogisticRegression::default()
                     .max_iterations(config.max_iterations)
+                    .gradient_tolerance(config.gradient_tolerance)
                     .alpha(config.alpha)
                     .fit(&dataset)
                     .map_err(Ms2AtomsError::model_training)?;
 
-                AtomLogisticClassifier::Fitted {
+                ElementLogisticClassifier::Fitted {
                     class_index,
                     used_positives: selection.used_positives,
                     used_negatives: selection.used_negatives,
@@ -165,10 +173,7 @@ fn train(
         classifiers.push(classifier);
     }
 
-    Ok(TrainedLinfaLogisticModel {
-        classifiers,
-        class_indices: class_indices.to_vec(),
-    })
+    Ok(TrainedLinfaLogisticModel { classifiers })
 }
 
 /// Selects all positives and a deterministic capped sample of negatives for one binary fit.
@@ -262,8 +267,8 @@ fn predict(
 ) -> Result<PredictionMatrix, Ms2AtomsError> {
     progress.report("building validation feature matrix")?;
     let features = feature_matrix(samples)?;
-    let mut scores = vec![Vec::with_capacity(trained_model.class_indices.len()); samples.len()];
     let total_classifiers = trained_model.classifiers.len();
+    let mut scores = vec![Vec::with_capacity(total_classifiers); samples.len()];
 
     progress.report_step(0, total_classifiers, "starting prediction")?;
 
@@ -271,7 +276,7 @@ fn predict(
         let step_number = position + 1;
 
         match classifier {
-            AtomLogisticClassifier::Fitted {
+            ElementLogisticClassifier::Fitted {
                 class_index,
                 model: fitted_model,
                 ..
@@ -295,7 +300,7 @@ fn predict(
                     row.push(presence_probability);
                 }
             }
-            AtomLogisticClassifier::Constant {
+            ElementLogisticClassifier::Constant {
                 class_index,
                 probability,
                 ..
@@ -312,8 +317,12 @@ fn predict(
             }
         }
     }
-
-    PredictionMatrix::new(trained_model.class_indices.clone(), scores)
+    let class_indices = trained_model
+        .classifiers
+        .iter()
+        .map(ElementLogisticClassifier::class_index)
+        .collect();
+    PredictionMatrix::new(class_indices, scores)
 }
 
 /// Writes a lightweight human-readable summary of the logistic baseline artifacts.
@@ -324,7 +333,7 @@ fn write_training_summary(
     let mut summary = String::from("Linfa one-vs-rest logistic regression\n");
     for classifier in &model.classifiers {
         match classifier {
-            AtomLogisticClassifier::Fitted {
+            ElementLogisticClassifier::Fitted {
                 class_index,
                 used_positives,
                 used_negatives,
@@ -342,7 +351,7 @@ fn write_training_summary(
                 )
                 .map_err(Ms2AtomsError::model_artifact)?;
             }
-            AtomLogisticClassifier::Constant {
+            ElementLogisticClassifier::Constant {
                 class_index,
                 probability,
                 original_positives,
@@ -422,6 +431,7 @@ mod tests {
     fn caps_positive_majority_for_common_element() {
         let config = LinfaLogisticConfig {
             max_iterations: 100,
+            gradient_tolerance: 1e-4,
             alpha: 1.0,
             random_seed: 42,
             max_majority_to_minority_ratio: Some(50),
@@ -437,6 +447,7 @@ mod tests {
     fn caps_negative_majority_for_rare_element() {
         let config = LinfaLogisticConfig {
             max_iterations: 100,
+            gradient_tolerance: 1e-4,
             alpha: 1.0,
             random_seed: 42,
             max_majority_to_minority_ratio: Some(50),

@@ -29,6 +29,7 @@ pub fn run() -> Result<(), Ms2AtomsError> {
         },
         model: ModelSpec::LinfaLogistic(LinfaLogisticConfig {
             max_iterations: 100,
+            gradient_tolerance: 1e-4,
             alpha: 1.0,
             random_seed: 42,
             max_majority_to_minority_ratio: Some(50),

@@ -5,6 +5,8 @@
 pub struct LinfaLogisticConfig {
     /// Maximum optimizer iterations for each binary classifier.
     pub max_iterations: u64,
+    /// Model minimum value for gradient change
+    pub gradient_tolerance: f64,
     /// L2 regularization weight used by Linfa logistic regression.
     pub alpha: f64,
     /// Seed used when deterministic class-balancing samples are drawn.
