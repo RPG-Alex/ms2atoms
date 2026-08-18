@@ -69,20 +69,6 @@ pub fn binary_targets(
     Ok(Array1::from(targets))
 }
 
-/// Builds a Linfa binary dataset for one element class.
-///
-/// # Errors
-/// Returns [`Ms2AtomsError`] if feature extraction or target extraction fails.
-pub fn binary_dataset(
-    samples: &[SpectrumSample],
-    class_index: usize,
-) -> Result<BinaryDataset, Ms2AtomsError> {
-    Ok(DatasetBase::new(
-        feature_matrix(samples)?,
-        binary_targets(samples, class_index)?,
-    ))
-}
-
 /// Builds a Linfa binary dataset from selected sample indices.
 ///
 /// # Errors

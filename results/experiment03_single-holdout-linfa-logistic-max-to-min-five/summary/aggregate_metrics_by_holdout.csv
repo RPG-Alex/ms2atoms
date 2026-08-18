@@ -1,0 +1,2 @@
+experiment,holdout,seed,threshold,threshold_label,macro_precision,macro_recall,macro_f1,macro_mcc,micro_precision,micro_recall,micro_f1,micro_mcc
+experiment03_single-holdout-linfa-logistic-max-to-min-five,0,61,0.5,0_50,0.10526315789473684,0.10297942025459908,0.10409596625970119,-0.00005026663922054883,0.9570340716723738,0.49474782430225167,0.652288785327721,0.6405362217961268

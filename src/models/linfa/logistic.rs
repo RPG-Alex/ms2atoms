@@ -1,6 +1,6 @@
 use linfa::traits::Fit;
 use linfa_logistic::{FittedLogisticRegression, LogisticRegression};
-use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
+use rand::{SeedableRng, rngs::ChaCha8Rng, seq::IndexedRandom};
 use std::{fmt::Write, fs, path::Path};
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     holdout::Holdout,
     models::linfa::{
         config::LinfaLogisticConfig,
-        dataset::{binary_dataset_from_indices, binary_targets, feature_matrix},
+        dataset::{binary_dataset_from_indices, feature_matrix},
     },
 };
 
@@ -182,36 +182,40 @@ fn selected_training_indices(
     class_index: usize,
     config: &LinfaLogisticConfig,
 ) -> Result<SelectedTrainingIndices, Ms2AtomsError> {
-    let targets = binary_targets(samples, class_index)?;
     let mut positive_indices = Vec::new();
     let mut negative_indices = Vec::new();
 
-    for (sample_index, target) in targets.iter().enumerate() {
-        if *target == 1 {
-            positive_indices.push(sample_index);
-        } else {
-            negative_indices.push(sample_index);
+    for (sample_index, sample) in samples.iter().enumerate() {
+        match sample.is_element_present(class_index) {
+            Some(true) => positive_indices.push(sample_index),
+            Some(false) => negative_indices.push(sample_index),
+            None => return Err(Ms2AtomsError::InvalidClassIndex { class_index }),
         }
     }
 
     let original_positives = positive_indices.len();
     let original_negatives = negative_indices.len();
 
+    if original_positives == 0 || original_negatives == 0 {
+        return Ok(SelectedTrainingIndices {
+            indices: Vec::new(),
+            original_positives,
+            original_negatives,
+            used_positives: original_positives,
+            used_negatives: original_negatives,
+        });
+    }
+
     let (used_positives, used_negatives) =
         selected_class_counts(original_positives, original_negatives, config);
 
     let mut rng = ChaCha8Rng::seed_from_u64(class_seed(config.random_seed, class_index)?);
 
-    positive_indices.shuffle(&mut rng);
-    negative_indices.shuffle(&mut rng);
-
     let mut indices = Vec::with_capacity(used_positives.saturating_add(used_negatives));
 
-    indices.extend(positive_indices.into_iter().take(used_positives));
+    indices.extend(select_indices(&positive_indices, used_positives, &mut rng));
 
-    indices.extend(negative_indices.into_iter().take(used_negatives));
-
-    indices.shuffle(&mut rng);
+    indices.extend(select_indices(&negative_indices, used_negatives, &mut rng));
 
     Ok(SelectedTrainingIndices {
         indices,
@@ -389,6 +393,18 @@ fn should_invert_probability(
     }
 }
 
+fn select_indices(
+    indices: &[usize],
+    amount: usize,
+    rng: &mut ChaCha8Rng,
+) -> Vec<usize> {
+    if amount >= indices.len() {
+        indices.to_vec()
+    } else {
+        indices.sample(rng, amount).copied().collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use linfa::{Dataset, traits::Fit};
@@ -457,5 +473,25 @@ mod tests {
         let counts = selected_class_counts(100, 300_000, &config);
 
         assert_eq!(counts, (100, 5_000));
+    }
+
+    #[test]
+    fn constant_positive_class_selects_zero_fitting_indices() {
+
+    }
+
+    #[test]
+    fn constant_negative_class_selects_zero_fitting_indices() {
+
+    }
+
+    #[test]
+    fn selection_is_deterministic_for_same_seed() {
+
+    }
+
+    #[test]
+    fn selected_indices_contain_exact_pos_neg_counts() {
+        
     }
 }
