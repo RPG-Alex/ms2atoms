@@ -22,7 +22,7 @@ pub enum Command {
 pub fn init_tracing() {
     fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn,ms2atoms=info")),
         )
         .init();
 }
@@ -78,7 +78,7 @@ pub fn write_usage(program_name: &str) -> Result<(), Ms2AtomsError> {
     writeln!(stdout)?;
     writeln!(stdout, "Examples:")?;
     writeln!(stdout, "  cargo run -- 1")?;
-    writeln!(stdout, "  RUST_LOG=debug cargo run -- 1")?;
+    writeln!(stdout, "  RUST_LOG=warn,ms2atoms=debug cargo run -- 1")?;
     writeln!(stdout)?;
     write_experiments(&mut stdout)
 }
