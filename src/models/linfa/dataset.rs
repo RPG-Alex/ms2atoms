@@ -1,3 +1,4 @@
+//! Module for working with the dataset with Linfa models
 use linfa::DatasetBase;
 use ndarray::{Array1, Array2};
 
@@ -6,7 +7,7 @@ use crate::{
     error::Ms2AtomsError,
 };
 
-/// Linfa dataset type used by the binary logistic-regression baseline.
+/// Linfa dataset type used by the binary logistic-regression.
 pub type BinaryDataset = DatasetBase<Array2<f64>, Array1<usize>>;
 
 /// Builds a feature matrix with shape `[n_samples, n_features]`.
@@ -66,20 +67,6 @@ pub fn binary_targets(
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Array1::from(targets))
-}
-
-/// Builds a Linfa binary dataset for one element class.
-///
-/// # Errors
-/// Returns [`Ms2AtomsError`] if feature extraction or target extraction fails.
-pub fn binary_dataset(
-    samples: &[SpectrumSample],
-    class_index: usize,
-) -> Result<BinaryDataset, Ms2AtomsError> {
-    Ok(DatasetBase::new(
-        feature_matrix(samples)?,
-        binary_targets(samples, class_index)?,
-    ))
 }
 
 /// Builds a Linfa binary dataset from selected sample indices.

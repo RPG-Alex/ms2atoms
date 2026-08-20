@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
@@ -118,7 +120,7 @@ impl ExperimentProtocol for StratifiedRetryProtocol {
             .map(|holdout_number| {
                 let initial_seed = holdout_seed(self.random_seed, holdout_number, 0);
                 let (initial_train, initial_validation) =
-                    random_split(dataset, initial_seed, self.training_size);
+                    grouped_random_split(dataset, initial_seed, self.training_size);
 
                 let mut best_score = split_score(
                     &initial_train,
@@ -132,7 +134,8 @@ impl ExperimentProtocol for StratifiedRetryProtocol {
 
                 for attempt in 1..attempts {
                     let seed = holdout_seed(self.random_seed, holdout_number, attempt);
-                    let (train, validation) = random_split(dataset, seed, self.training_size);
+                    let (train, validation) =
+                        grouped_random_split(dataset, seed, self.training_size);
                     let score =
                         split_score(&train, &validation, &class_indices, self.training_size);
 
@@ -164,7 +167,7 @@ fn make_random_holdout(
     holdout_seed: u64,
     training_size: f32,
 ) -> BasicHoldout {
-    let (train, validation) = random_split(dataset, holdout_seed, training_size);
+    let (train, validation) = grouped_random_split(dataset, holdout_seed, training_size);
 
     BasicHoldout::new(
         SpectraData::from_samples(train, dataset.bin_size()),
@@ -176,21 +179,72 @@ fn make_random_holdout(
 }
 
 /// Splits a dataset into shuffled training and validation samples.
-fn random_split(
+// fn random_split(
+//     dataset: &SpectraData,
+//     seed: u64,
+//     training_size: f32,
+// ) -> (Vec<SpectrumSample>, Vec<SpectrumSample>) {
+//     let mut samples = dataset.samples().to_vec();
+//     let mut rng = ChaCha8Rng::seed_from_u64(seed);
+
+//     samples.shuffle(&mut rng);
+
+//     let split_index = split_index(samples.len(), training_size);
+//     let validation = samples.split_off(split_index);
+//     let train = samples;
+
+//     (train, validation)
+// }
+
+/// Splits a dataset into shuffled molecular groups. All spectra with the same group identifier are assigned to the same split.
+fn grouped_random_split(
     dataset: &SpectraData,
     seed: u64,
     training_size: f32,
 ) -> (Vec<SpectrumSample>, Vec<SpectrumSample>) {
-    let mut samples = dataset.samples().to_vec();
+    let mut samples_by_group: BTreeMap<&str, Vec<SpectrumSample>> = BTreeMap::new();
+
+    for sample in dataset.samples() {
+        samples_by_group
+            .entry(sample.group_id())
+            .or_default()
+            .push(sample.clone());
+    }
+
+    let mut groups: Vec<Vec<SpectrumSample>> = samples_by_group.into_values().collect();
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
 
-    samples.shuffle(&mut rng);
+    groups.shuffle(&mut rng);
 
-    let split_index = split_index(samples.len(), training_size);
-    let validation = samples.split_off(split_index);
-    let train = samples;
+    let target_training_samples = split_index(dataset.len(), training_size);
+    let split_group_index = closest_group_boundary(&groups, target_training_samples);
+
+    let validation_groups = groups.split_off(split_group_index);
+
+    let train = groups.into_iter().flatten().collect();
+    let validation = validation_groups.into_iter().flatten().collect();
 
     (train, validation)
+}
+
+/// Returns the group boundary closest to the target sample count.
+fn closest_group_boundary(groups: &[Vec<SpectrumSample>], target_sample_count: usize) -> usize {
+    let mut best_group_index = 0;
+    let mut best_distance = target_sample_count;
+    let mut sample_count = 0;
+
+    for (group_index, group) in groups.iter().enumerate() {
+        sample_count += group.len();
+
+        let distance = sample_count.abs_diff(target_sample_count);
+
+        if distance < best_distance {
+            best_distance = distance;
+            best_group_index = group_index + 1;
+        }
+    }
+
+    best_group_index
 }
 
 /// Computes the number of samples assigned to the training split.
@@ -264,4 +318,40 @@ fn count_positive_samples(samples: &[SpectrumSample], class_index: usize) -> usi
 /// Computes the deterministic seed for one holdout attempt.
 const fn holdout_seed(base_seed: u64, holdout_number: usize, attempt: usize) -> u64 {
     base_seed + holdout_number as u64 * 10_000 + attempt as u64
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::*;
+
+    #[test]
+    fn grouped_split_keeps_molecules_in_one_partition() {
+        let samples = vec![
+            sample("molecule-a"),
+            sample("molecule-a"),
+            sample("molecule-b"),
+            sample("molecule-c"),
+            sample("molecule-c"),
+        ];
+
+        let dataset = SpectraData::from_samples(samples, 10);
+        let (train, validation) = grouped_random_split(&dataset, 42, 0.8);
+
+        let train_groups: BTreeSet<&str> = train.iter().map(SpectrumSample::group_id).collect();
+
+        let validation_groups: BTreeSet<&str> =
+            validation.iter().map(SpectrumSample::group_id).collect();
+
+        assert!(train_groups.is_disjoint(&validation_groups));
+    }
+
+    fn sample(group_id: &str) -> SpectrumSample {
+        SpectrumSample::new(
+            group_id.to_owned(),
+            vec![0.0; 10],
+            [false; crate::domain::elements::ELEMENT_COUNT],
+        )
+    }
 }

@@ -7,18 +7,17 @@ use crate::{
     models::{linfa::config::LinfaLogisticConfig, spec::ModelSpec},
 };
 
-/// Runs the Linfa logistic-regression baseline experiment.
+/// Runs the Linfa logistic-regression baseline experiment with max to min reduced from 50 to 5.
 ///
-/// This experiment uses the same holdout settings as experiment 1, but swaps the
-/// Burn MLP for independent binary logistic-regression classifiers.
+/// This experiment uses the same holdout settings as experiment 2 but reduces the max to min to 5.
 ///
 /// # Errors
 /// Returns [`Ms2AtomsError`] if experiment execution fails.
 pub fn run() -> Result<(), Ms2AtomsError> {
     let config = ExperimentConfig {
         run: RunConfig {
-            experiment_num: 2,
-            name: "single_holdout-linfa-logistic-baseline".to_owned(),
+            experiment_num: 3,
+            name: "single_holdout-linfa-logistic-max-to-min-five".to_owned(),
         },
         features: FeatureConfig { bin_size: 1000 },
         protocol: StratifiedRetryProtocol {
@@ -32,7 +31,7 @@ pub fn run() -> Result<(), Ms2AtomsError> {
             gradient_tolerance: 1e-4,
             alpha: 1.0,
             random_seed: 42,
-            max_majority_to_minority_ratio: Some(50),
+            max_majority_to_minority_ratio: Some(5),
             max_samples_per_class: Some(50_000),
         }),
         evaluation: EvaluationConfig {
