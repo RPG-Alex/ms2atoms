@@ -525,7 +525,7 @@ mod tests {
 
         let selection = selected_training_indices(&samples, class_index, &test_config())?;
 
-        assert!(selection.indices.is_empty());
+        assert_eq!(selection.indices, [] as [usize; 0]);
         assert_eq!(selection.original_positives, 10);
         assert_eq!(selection.original_negatives, 0);
         assert_eq!(selection.used_positives, 10);
@@ -541,7 +541,7 @@ mod tests {
 
         let selection = selected_training_indices(&samples, class_index, &test_config())?;
 
-        assert!(selection.indices.is_empty());
+        assert_eq!(selection.indices, [] as [usize; 0]);
         assert_eq!(selection.original_positives, 0);
         assert_eq!(selection.original_negatives, 10);
         assert_eq!(selection.used_positives, 0);

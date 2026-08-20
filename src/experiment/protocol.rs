@@ -179,24 +179,21 @@ fn make_random_holdout(
 }
 
 /// Splits a dataset into shuffled training and validation samples.
-// fn random_split(
-//     dataset: &SpectraData,
-//     seed: u64,
-//     training_size: f32,
-// ) -> (Vec<SpectrumSample>, Vec<SpectrumSample>) {
-//     let mut samples = dataset.samples().to_vec();
-//     let mut rng = ChaCha8Rng::seed_from_u64(seed);
-
-//     samples.shuffle(&mut rng);
-
-//     let split_index = split_index(samples.len(), training_size);
-//     let validation = samples.split_off(split_index);
-//     let train = samples;
-
-//     (train, validation)
-// }
-
-/// Splits a dataset into shuffled molecular groups. All spectra with the same group identifier are assigned to the same split.
+/// ```
+/// fn random_split(
+///     dataset: &SpectraData,
+///     seed: u64,
+///     training_size: f32,
+/// ) -> (Vec<SpectrumSample>, Vec<SpectrumSample>) {
+///     let mut samples = dataset.samples().to_vec();
+///     let mut rng = ChaCha8Rng::seed_from_u64(seed);
+///     samples.shuffle(&mut rng);
+///     let split_index = split_index(samples.len(), training_size);
+///     let validation = samples.split_off(split_index);
+///     let train = samples;
+///     (train, validation)
+/// ```
+/// }
 fn grouped_random_split(
     dataset: &SpectraData,
     seed: u64,

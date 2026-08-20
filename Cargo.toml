@@ -52,7 +52,7 @@ warnings = "deny"
 missing_docs = "deny"
 unsafe_code = "forbid"
 deprecated = "deny"
-nonstandard_style = "deny"
+nonstandard_style = {level = "deny", priority = -1}
 unused_import_braces = "forbid"
 unused_must_use = "forbid"
 unconditional_recursion = "forbid"
